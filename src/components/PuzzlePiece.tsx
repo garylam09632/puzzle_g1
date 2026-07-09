@@ -32,7 +32,7 @@ type DragState = {
 type RotateGestureState = {
   startAngle: number;
   startRotation: number;
-  snapped: boolean;
+  finished: boolean;
 };
 
 type TapState = {
@@ -62,25 +62,23 @@ function clientToSvg(
   return [transformed.x, transformed.y];
 }
 
-function angleBetween(
+/** Angle of the line between two pointers, in degrees. */
+function pointerPairAngle(
   p1: { x: number; y: number },
   p2: { x: number; y: number },
-  center: { x: number; y: number },
 ): number {
-  const a1 = Math.atan2(p1.y - center.y, p1.x - center.x);
-  const a2 = Math.atan2(p2.y - center.y, p2.x - center.x);
-  let delta = (a2 - a1) * (180 / Math.PI);
-  if (delta > 180) {
+  return (Math.atan2(p2.y - p1.y, p2.x - p1.x) * 180) / Math.PI;
+}
+
+function normalizeAngleDelta(degrees: number): number {
+  let delta = degrees;
+  while (delta > 180) {
     delta -= 360;
-  } else if (delta < -180) {
+  }
+  while (delta < -180) {
     delta += 360;
   }
   return delta;
-}
-
-function snapToNearest90(rotation: number): number {
-  const snapped = Math.round(rotation / 90) * 90;
-  return normalizeRotation(snapped);
 }
 
 export function PuzzlePiece({
@@ -113,12 +111,9 @@ export function PuzzlePiece({
 
     dragRef.current = null;
     rotateGestureRef.current = {
-      startAngle: angleBetween(pointers[0], pointers[1], {
-        x: piece.x,
-        y: piece.y,
-      }),
+      startAngle: pointerPairAngle(pointers[0], pointers[1]),
       startRotation: piece.rotation,
-      snapped: false,
+      finished: false,
     };
   };
 
@@ -142,7 +137,8 @@ export function PuzzlePiece({
       y: event.clientY,
     });
 
-    if (!isFinePointer && activePointersRef.current.size === 2) {
+    // Instagram Stories-style: two fingers on a piece starts free twist rotate.
+    if (activePointersRef.current.size === 2) {
       beginRotateGesture();
       return;
     }
@@ -172,14 +168,11 @@ export function PuzzlePiece({
     }
 
     const rotateGesture = rotateGestureRef.current;
-    if (!isFinePointer && rotateGesture && activePointersRef.current.size >= 2) {
+    if (rotateGesture && activePointersRef.current.size >= 2) {
       event.preventDefault();
       const pointers = Array.from(activePointersRef.current.values());
-      const currentAngle = angleBetween(pointers[0], pointers[1], {
-        x: piece.x,
-        y: piece.y,
-      });
-      const delta = currentAngle - rotateGesture.startAngle;
+      const currentAngle = pointerPairAngle(pointers[0], pointers[1]);
+      const delta = normalizeAngleDelta(currentAngle - rotateGesture.startAngle);
       onChange(piece.id, {
         rotation: normalizeRotation(rotateGesture.startRotation + delta),
       });
@@ -206,15 +199,13 @@ export function PuzzlePiece({
 
   const finishRotateGesture = () => {
     const rotateGesture = rotateGestureRef.current;
-    if (!rotateGesture || rotateGesture.snapped) {
+    if (!rotateGesture || rotateGesture.finished) {
       return;
     }
 
-    rotateGesture.snapped = true;
+    // Keep the free angle at release — no snap to 90°.
+    rotateGesture.finished = true;
     rotatedThisGestureRef.current = true;
-    onChange(piece.id, {
-      rotation: snapToNearest90(piece.rotation),
-    });
     onDragEnd();
   };
 
@@ -258,20 +249,21 @@ export function PuzzlePiece({
     }
 
     const drag = dragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) {
+    if (drag && drag.pointerId === event.pointerId) {
+      dragRef.current = null;
+      event.currentTarget.releasePointerCapture(event.pointerId);
+
+      if (!hadRotateGesture) {
+        handleMobileDoubleTapFlip(event.clientX, event.clientY);
+      }
+
+      if (movedDuringGestureRef.current) {
+        onDragEnd();
+      }
       return;
     }
 
-    dragRef.current = null;
     event.currentTarget.releasePointerCapture(event.pointerId);
-
-    if (!hadRotateGesture) {
-      handleMobileDoubleTapFlip(event.clientX, event.clientY);
-    }
-
-    if (movedDuringGestureRef.current) {
-      onDragEnd();
-    }
   };
 
   const handleWheel = (event: React.WheelEvent<SVGPolygonElement>) => {

@@ -113,8 +113,8 @@ export function TPuzzleGame() {
         <p className="mx-auto max-w-2xl text-base text-zinc-600">
           Drag the four pieces onto the faded T outline.{" "}
           {isFinePointer
-            ? "Scroll over a selected piece to rotate; double-click to flip."
-            : "Twist with two fingers to rotate; double-tap a selected piece to flip."}{" "}
+            ? "Scroll over a selected piece to rotate; double-click to flip. Or twist with two fingers for free rotation."
+            : "Twist with two fingers to rotate freely; double-tap a selected piece to flip."}{" "}
           Fill the T exactly to win.
         </p>
       </header>
@@ -212,12 +212,13 @@ export function TPuzzleGame() {
             <li>Drag pieces over the faded T guide.</li>
             {isFinePointer ? (
               <>
-                <li>Scroll over a selected piece to rotate it.</li>
+                <li>Scroll over a selected piece to rotate in 90° steps.</li>
+                <li>Twist with two fingers to rotate freely (release to keep the angle).</li>
                 <li>Double-click a selected piece to flip it.</li>
               </>
             ) : (
               <>
-                <li>Twist with two fingers on a selected piece to rotate it.</li>
+                <li>Twist with two fingers to rotate freely; release to keep the angle.</li>
                 <li>Double-tap a selected piece to flip it.</li>
               </>
             )}
