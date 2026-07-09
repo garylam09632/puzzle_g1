@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - cursor/github-pages-deploy-84de
   workflow_dispatch:
 
 permissions:
