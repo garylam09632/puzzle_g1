@@ -26,9 +26,20 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 - TypeScript
 - Tailwind CSS
 
+## Live preview (GitHub Pages)
+
+After the deploy workflow runs, the game is available at:
+
+**https://garylam09632.github.io/puzzle_g1/**
+
+Pushes to `main` trigger an automatic deploy. You can also run the **Deploy to GitHub Pages** workflow manually from the Actions tab.
+
+> **One-time setup:** In the repo **Settings → Pages**, set **Build and deployment → Source** to **GitHub Actions**.
+
 ## Scripts
 
 - `npm run dev` — start the development server
 - `npm run build` — create a production build
+- `npm run build:pages` — production static export for GitHub Pages
 - `npm run start` — run the production server
 - `npm run lint` — run ESLint
