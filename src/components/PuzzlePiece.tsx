@@ -9,6 +9,7 @@ import {
   UNIT,
   type PieceState,
 } from "@/lib/t-puzzle";
+import { useFinePointer } from "@/lib/useMediaQuery";
 
 type PuzzlePieceProps = {
   piece: PieceState;
@@ -24,7 +25,24 @@ type DragState = {
   pointerId: number;
   offsetX: number;
   offsetY: number;
+  startX: number;
+  startY: number;
 };
+
+type RotateGestureState = {
+  startAngle: number;
+  startRotation: number;
+  snapped: boolean;
+};
+
+type TapState = {
+  time: number;
+  x: number;
+  y: number;
+};
+
+const MOVE_THRESHOLD_PX = 10;
+const DOUBLE_TAP_MS = 300;
 
 function clientToSvg(
   svg: SVGSVGElement,
@@ -44,6 +62,27 @@ function clientToSvg(
   return [transformed.x, transformed.y];
 }
 
+function angleBetween(
+  p1: { x: number; y: number },
+  p2: { x: number; y: number },
+  center: { x: number; y: number },
+): number {
+  const a1 = Math.atan2(p1.y - center.y, p1.x - center.x);
+  const a2 = Math.atan2(p2.y - center.y, p2.x - center.x);
+  let delta = (a2 - a1) * (180 / Math.PI);
+  if (delta > 180) {
+    delta -= 360;
+  } else if (delta < -180) {
+    delta += 360;
+  }
+  return delta;
+}
+
+function snapToNearest90(rotation: number): number {
+  const snapped = Math.round(rotation / 90) * 90;
+  return normalizeRotation(snapped);
+}
+
 export function PuzzlePiece({
   piece,
   selected,
@@ -53,10 +92,35 @@ export function PuzzlePiece({
   onChange,
   onDragEnd,
 }: PuzzlePieceProps) {
+  const isFinePointer = useFinePointer();
   const dragRef = useRef<DragState | null>(null);
+  const movedDuringGestureRef = useRef(false);
+  const wasSelectedOnPointerDownRef = useRef(false);
+  const activePointersRef = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const rotateGestureRef = useRef<RotateGestureState | null>(null);
+  const rotatedThisGestureRef = useRef(false);
+  const lastTapRef = useRef<TapState | null>(null);
+
   const definition = getPieceDefinition(piece.id);
   const transformedPoints = getTransformedPoints(piece);
   const polygon = pointsToPolygon(transformedPoints);
+
+  const beginRotateGesture = () => {
+    const pointers = Array.from(activePointersRef.current.values());
+    if (pointers.length < 2) {
+      return;
+    }
+
+    dragRef.current = null;
+    rotateGestureRef.current = {
+      startAngle: angleBetween(pointers[0], pointers[1], {
+        x: piece.x,
+        y: piece.y,
+      }),
+      startRotation: piece.rotation,
+      snapped: false,
+    };
+  };
 
   const handlePointerDown = (event: React.PointerEvent<SVGPolygonElement>) => {
     if (disabled) {
@@ -70,22 +134,67 @@ export function PuzzlePiece({
 
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
+    wasSelectedOnPointerDownRef.current = selected;
     onSelect(piece.id);
 
+    activePointersRef.current.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+
+    if (!isFinePointer && activePointersRef.current.size === 2) {
+      beginRotateGesture();
+      return;
+    }
+
     const [pointerX, pointerY] = clientToSvg(svg, event.clientX, event.clientY);
+    movedDuringGestureRef.current = false;
     dragRef.current = {
       pointerId: event.pointerId,
       offsetX: pointerX - piece.x,
       offsetY: pointerY - piece.y,
+      startX: event.clientX,
+      startY: event.clientY,
     };
   };
 
   const handlePointerMove = (event: React.PointerEvent<SVGPolygonElement>) => {
-    const drag = dragRef.current;
     const svg = svgRef.current;
-
-    if (!drag || !svg || drag.pointerId !== event.pointerId) {
+    if (!svg) {
       return;
+    }
+
+    if (activePointersRef.current.has(event.pointerId)) {
+      activePointersRef.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+    }
+
+    const rotateGesture = rotateGestureRef.current;
+    if (!isFinePointer && rotateGesture && activePointersRef.current.size >= 2) {
+      event.preventDefault();
+      const pointers = Array.from(activePointersRef.current.values());
+      const currentAngle = angleBetween(pointers[0], pointers[1], {
+        x: piece.x,
+        y: piece.y,
+      });
+      const delta = currentAngle - rotateGesture.startAngle;
+      onChange(piece.id, {
+        rotation: normalizeRotation(rotateGesture.startRotation + delta),
+      });
+      return;
+    }
+
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    const dx = event.clientX - drag.startX;
+    const dy = event.clientY - drag.startY;
+    if (Math.hypot(dx, dy) > MOVE_THRESHOLD_PX) {
+      movedDuringGestureRef.current = true;
     }
 
     const [pointerX, pointerY] = clientToSvg(svg, event.clientX, event.clientY);
@@ -95,7 +204,59 @@ export function PuzzlePiece({
     });
   };
 
+  const finishRotateGesture = () => {
+    const rotateGesture = rotateGestureRef.current;
+    if (!rotateGesture || rotateGesture.snapped) {
+      return;
+    }
+
+    rotateGesture.snapped = true;
+    rotatedThisGestureRef.current = true;
+    onChange(piece.id, {
+      rotation: snapToNearest90(piece.rotation),
+    });
+    onDragEnd();
+  };
+
+  const handleMobileDoubleTapFlip = (clientX: number, clientY: number) => {
+    if (
+      isFinePointer ||
+      !wasSelectedOnPointerDownRef.current ||
+      movedDuringGestureRef.current ||
+      rotatedThisGestureRef.current
+    ) {
+      return;
+    }
+
+    const now = Date.now();
+    const lastTap = lastTapRef.current;
+    if (
+      lastTap &&
+      now - lastTap.time <= DOUBLE_TAP_MS &&
+      Math.hypot(clientX - lastTap.x, clientY - lastTap.y) <= MOVE_THRESHOLD_PX
+    ) {
+      onChange(piece.id, { flipped: !piece.flipped });
+      onDragEnd();
+      lastTapRef.current = null;
+      return;
+    }
+
+    lastTapRef.current = { time: now, x: clientX, y: clientY };
+  };
+
   const handlePointerUp = (event: React.PointerEvent<SVGPolygonElement>) => {
+    const hadRotateGesture = rotateGestureRef.current !== null;
+    activePointersRef.current.delete(event.pointerId);
+
+    if (hadRotateGesture && activePointersRef.current.size < 2) {
+      finishRotateGesture();
+      rotateGestureRef.current = null;
+    }
+
+    if (activePointersRef.current.size === 0) {
+      rotatedThisGestureRef.current = false;
+    }
+
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) {
       return;
@@ -103,17 +264,37 @@ export function PuzzlePiece({
 
     dragRef.current = null;
     event.currentTarget.releasePointerCapture(event.pointerId);
+
+    if (!hadRotateGesture) {
+      handleMobileDoubleTapFlip(event.clientX, event.clientY);
+    }
+
+    if (movedDuringGestureRef.current) {
+      onDragEnd();
+    }
+  };
+
+  const handleWheel = (event: React.WheelEvent<SVGPolygonElement>) => {
+    if (disabled || !isFinePointer || !selected) {
+      return;
+    }
+
+    event.preventDefault();
+    const delta = event.deltaY < 0 ? 90 : -90;
+    onChange(piece.id, {
+      rotation: normalizeRotation(piece.rotation + delta),
+    });
     onDragEnd();
   };
 
   const handleDoubleClick = () => {
-    if (disabled) {
+    if (disabled || !isFinePointer || movedDuringGestureRef.current) {
       return;
     }
 
     onSelect(piece.id);
     onChange(piece.id, {
-      rotation: normalizeRotation(piece.rotation + 90),
+      flipped: !piece.flipped,
     });
     onDragEnd();
   };
@@ -134,6 +315,7 @@ export function PuzzlePiece({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
+        onWheel={handleWheel}
         onDoubleClick={handleDoubleClick}
       />
       {selected ? (

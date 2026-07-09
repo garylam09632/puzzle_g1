@@ -16,8 +16,10 @@ import {
   type PieceId,
   type PieceState,
 } from "@/lib/t-puzzle";
+import { useFinePointer } from "@/lib/useMediaQuery";
 
 export function TPuzzleGame() {
+  const isFinePointer = useFinePointer();
   const svgRef = useRef<SVGSVGElement>(null);
   const [pieces, setPieces] = useState<PieceState[]>(createInitialPieces);
   const [selectedId, setSelectedId] = useState<PieceId | null>(null);
@@ -109,8 +111,11 @@ export function TPuzzleGame() {
           Form the letter T
         </h1>
         <p className="mx-auto max-w-2xl text-base text-zinc-600">
-          Drag the four pieces onto the faded T outline. Double-click a piece or use
-          Rotate / Flip to transform it. Fill the T exactly to win.
+          Drag the four pieces onto the faded T outline.{" "}
+          {isFinePointer
+            ? "Scroll over a selected piece to rotate; double-click to flip."
+            : "Twist with two fingers to rotate; double-tap a selected piece to flip."}{" "}
+          Fill the T exactly to win.
         </p>
       </header>
 
@@ -205,7 +210,18 @@ export function TPuzzleGame() {
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>Click a piece to select it.</li>
             <li>Drag pieces over the faded T guide.</li>
-            <li>Rotate or flip pieces until they fit together.</li>
+            {isFinePointer ? (
+              <>
+                <li>Scroll over a selected piece to rotate it.</li>
+                <li>Double-click a selected piece to flip it.</li>
+              </>
+            ) : (
+              <>
+                <li>Twist with two fingers on a selected piece to rotate it.</li>
+                <li>Double-tap a selected piece to flip it.</li>
+              </>
+            )}
+            <li>Or use the Rotate / Flip buttons as shortcuts.</li>
           </ul>
         </div>
         <div className="rounded-2xl border border-zinc-200 bg-white p-4">
