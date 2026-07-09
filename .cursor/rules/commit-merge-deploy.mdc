@@ -1,0 +1,39 @@
+---
+description: Commit, merge to main, and deploy to GitHub Pages after every product change
+alwaysApply: true
+---
+
+# Commit, merge, and deploy
+
+After completing any product change (features, fixes, UI, gameplay), finish the full delivery loop in the same session. Do not stop at local edits only.
+
+## Workflow (required)
+
+1. **Branch** — Work on `cursor/<descriptive-name>-84de` off `main`.
+2. **Change** — Implement the smallest correct diff; match existing project conventions.
+3. **Verify** — Run `npm run lint` and `npm run build:pages` when the change could affect the build.
+4. **Commit** — Stage only relevant files. Use a clear commit message in complete sentences.
+5. **Push** — `git push -u origin <branch-name>`.
+6. **Merge to `main`** — Merge (or fast-forward) into `main` and push: `git push origin main`.
+   - GitHub Pages deploys **only from `main`** (see `github-pages` environment branch policy).
+7. **Confirm deploy** — Check the **Deploy to GitHub Pages** workflow on `main` succeeds.
+8. **Share the preview URL** — https://garylam09632.github.io/puzzle_g1/
+
+## Git conventions
+
+- Branch prefix: `cursor/`
+- Branch suffix: `-84de`
+- Push: `git push -u origin <branch>`
+- Prefer fast-forward merge to `main` when possible.
+
+## Deploy notes
+
+- Preview host: GitHub Pages (static export via `npm run build:pages`).
+- Production server CI/CD will be added later; until then, `main` → Pages is the review channel (especially for Cursor iOS).
+- If deploy fails with a 404, confirm Pages source is **GitHub Actions** and the run is on **`main`**, not a feature branch.
+
+## Do not
+
+- Leave completed changes uncommitted.
+- Stop after opening a PR without merging to `main` when the user expects a live preview.
+- Deploy from feature branches (they will fail with a misleading 404).
