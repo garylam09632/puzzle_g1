@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PuzzlePiece } from "@/components/PuzzlePiece";
 import {
   BOARD_HEIGHT,
@@ -21,9 +21,11 @@ import { useFinePointer } from "@/lib/useMediaQuery";
 export function TPuzzleGame() {
   const isFinePointer = useFinePointer();
   const svgRef = useRef<SVGSVGElement>(null);
+  const playAgainRef = useRef<HTMLButtonElement>(null);
   const [pieces, setPieces] = useState<PieceState[]>(createInitialPieces);
   const [selectedId, setSelectedId] = useState<PieceId | null>(null);
   const [solved, setSolved] = useState(false);
+  const [showSolvedPopup, setShowSolvedPopup] = useState(false);
   const [moves, setMoves] = useState(0);
 
   const boardWidth = BOARD_WIDTH + BOARD_PADDING * 2;
@@ -51,8 +53,26 @@ export function TPuzzleGame() {
   const checkSolution = (nextPieces: PieceState[]) => {
     if (isPuzzleSolved(nextPieces)) {
       setSolved(true);
+      setShowSolvedPopup(true);
     }
   };
+
+  useEffect(() => {
+    if (!showSolvedPopup) {
+      return;
+    }
+
+    playAgainRef.current?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowSolvedPopup(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showSolvedPopup]);
 
   const handleDragEnd = () => {
     setMoves((count) => count + 1);
@@ -98,7 +118,12 @@ export function TPuzzleGame() {
     setPieces(createInitialPieces());
     setSelectedId(null);
     setSolved(false);
+    setShowSolvedPopup(false);
     setMoves(0);
+  };
+
+  const handleDismissSolvedPopup = () => {
+    setShowSolvedPopup(false);
   };
 
   return (
@@ -192,17 +217,55 @@ export function TPuzzleGame() {
           ))}
         </svg>
 
-        {solved ? (
-          <div className="absolute inset-0 flex items-center justify-center rounded-3xl bg-black/35 p-6">
-            <div className="rounded-2xl bg-white px-6 py-4 text-center shadow-xl">
-              <p className="text-2xl font-bold text-zinc-900">You solved it!</p>
-              <p className="mt-1 text-sm text-zinc-600">
-                The four pieces form a perfect T in {moves} moves.
-              </p>
+      </div>
+
+      {showSolvedPopup ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/45 p-4 backdrop-blur-[2px]"
+          role="presentation"
+          onClick={handleDismissSolvedPopup}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="solved-title"
+            aria-describedby="solved-description"
+            className="solved-popup w-full max-w-sm rounded-3xl border border-amber-200 bg-white px-6 py-7 text-center shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
+              Puzzle complete
+            </p>
+            <h2
+              id="solved-title"
+              className="mt-3 text-3xl font-bold tracking-tight text-zinc-900"
+            >
+              You solved it!
+            </h2>
+            <p id="solved-description" className="mt-2 text-sm text-zinc-600">
+              The four pieces form a perfect T in{" "}
+              <span className="font-semibold text-zinc-800">{moves}</span> moves.
+            </p>
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+              <button
+                ref={playAgainRef}
+                type="button"
+                onClick={handleReset}
+                className="rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-700"
+              >
+                Play again
+              </button>
+              <button
+                type="button"
+                onClick={handleDismissSolvedPopup}
+                className="rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-medium text-zinc-700 transition hover:border-zinc-500 hover:text-zinc-900"
+              >
+                Keep viewing
+              </button>
             </div>
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       <section className="mx-auto grid max-w-2xl gap-3 text-sm text-zinc-600 sm:grid-cols-2">
         <div className="rounded-2xl border border-zinc-200 bg-white p-4">
