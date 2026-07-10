@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PuzzlePiece } from "@/components/PuzzlePiece";
 import {
+  normalizeAngleDelta,
+  pointerPairAngle,
+} from "@/lib/pointer-gesture";
+import {
   BOARD_HEIGHT,
   BOARD_PADDING,
   BOARD_WIDTH,
@@ -18,6 +22,13 @@ import {
 } from "@/lib/t-puzzle";
 import { useFinePointer } from "@/lib/useMediaQuery";
 
+type RotateGestureState = {
+  startAngle: number;
+  startRotation: number;
+  pieceId: PieceId;
+  finished: boolean;
+};
+
 export function TPuzzleGame() {
   const isFinePointer = useFinePointer();
   const svgRef = useRef<SVGSVGElement>(null);
@@ -27,6 +38,28 @@ export function TPuzzleGame() {
   const [solved, setSolved] = useState(false);
   const [showSolvedPopup, setShowSolvedPopup] = useState(false);
   const [moves, setMoves] = useState(0);
+  const [boardRotating, setBoardRotating] = useState(false);
+
+  const piecesRef = useRef(pieces);
+  const selectedIdRef = useRef(selectedId);
+  const solvedRef = useRef(solved);
+  const gestureLockRef = useRef({ rotating: false });
+  const activePointersRef = useRef<Map<number, { x: number; y: number }>>(
+    new Map(),
+  );
+  const rotateGestureRef = useRef<RotateGestureState | null>(null);
+
+  useEffect(() => {
+    piecesRef.current = pieces;
+  }, [pieces]);
+
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
+
+  useEffect(() => {
+    solvedRef.current = solved;
+  }, [solved]);
 
   const boardWidth = BOARD_WIDTH + BOARD_PADDING * 2;
   const boardHeight = BOARD_HEIGHT + BOARD_PADDING * 2 + TRAY_HEIGHT;
@@ -48,6 +81,11 @@ export function TPuzzleGame() {
     setPieces((current) =>
       current.map((piece) => (piece.id === id ? { ...piece, ...next } : piece)),
     );
+  };
+
+  const handleSelect = (id: PieceId) => {
+    selectedIdRef.current = id;
+    setSelectedId(id);
   };
 
   const checkSolution = (nextPieces: PieceState[]) => {
@@ -80,6 +118,104 @@ export function TPuzzleGame() {
       checkSolution(current);
       return current;
     });
+  };
+
+  const beginBoardRotate = () => {
+    const pieceId = selectedIdRef.current;
+    if (!pieceId || solvedRef.current) {
+      return;
+    }
+
+    const pointers = Array.from(activePointersRef.current.values());
+    if (pointers.length < 2) {
+      return;
+    }
+
+    const piece = piecesRef.current.find((entry) => entry.id === pieceId);
+    if (!piece) {
+      return;
+    }
+
+    gestureLockRef.current.rotating = true;
+    setBoardRotating(true);
+    rotateGestureRef.current = {
+      startAngle: pointerPairAngle(pointers[0], pointers[1]),
+      startRotation: piece.rotation,
+      pieceId,
+      finished: false,
+    };
+  };
+
+  const finishBoardRotate = () => {
+    const rotateGesture = rotateGestureRef.current;
+    if (!rotateGesture || rotateGesture.finished) {
+      return;
+    }
+
+    rotateGesture.finished = true;
+    rotateGestureRef.current = null;
+    gestureLockRef.current.rotating = false;
+    setBoardRotating(false);
+    handleDragEnd();
+  };
+
+  const handleBoardPointerDownCapture = (
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    if (solvedRef.current || showSolvedPopup) {
+      return;
+    }
+
+    activePointersRef.current.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+
+    if (
+      selectedIdRef.current &&
+      activePointersRef.current.size === 2 &&
+      !rotateGestureRef.current
+    ) {
+      event.preventDefault();
+      beginBoardRotate();
+    }
+  };
+
+  const handleBoardPointerMoveCapture = (
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    if (!activePointersRef.current.has(event.pointerId)) {
+      return;
+    }
+
+    activePointersRef.current.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+
+    const rotateGesture = rotateGestureRef.current;
+    if (!rotateGesture || activePointersRef.current.size < 2) {
+      return;
+    }
+
+    event.preventDefault();
+    const pointers = Array.from(activePointersRef.current.values());
+    const currentAngle = pointerPairAngle(pointers[0], pointers[1]);
+    const delta = normalizeAngleDelta(currentAngle - rotateGesture.startAngle);
+    updatePiece(rotateGesture.pieceId, {
+      rotation: normalizeRotation(rotateGesture.startRotation + delta),
+    });
+  };
+
+  const handleBoardPointerUpCapture = (
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    const hadRotate = rotateGestureRef.current !== null;
+    activePointersRef.current.delete(event.pointerId);
+
+    if (hadRotate && activePointersRef.current.size < 2) {
+      finishBoardRotate();
+    }
   };
 
   const handleRotateSelected = () => {
@@ -115,6 +251,10 @@ export function TPuzzleGame() {
   };
 
   const handleReset = () => {
+    activePointersRef.current.clear();
+    rotateGestureRef.current = null;
+    gestureLockRef.current.rotating = false;
+    setBoardRotating(false);
     setPieces(createInitialPieces());
     setSelectedId(null);
     setSolved(false);
@@ -138,8 +278,8 @@ export function TPuzzleGame() {
         <p className="mx-auto max-w-2xl text-base text-zinc-600">
           Drag the four pieces onto the faded T outline.{" "}
           {isFinePointer
-            ? "Scroll over a selected piece to rotate; double-click to flip. Or twist with two fingers for free rotation."
-            : "Twist with two fingers to rotate freely; double-tap a selected piece to flip."}{" "}
+            ? "Scroll over a selected piece to rotate; double-click to flip. Or select a piece and twist with two fingers anywhere on the board."
+            : "Select a piece, then twist with two fingers anywhere on the board to rotate freely; double-tap a selected piece to flip."}{" "}
           Fill the T exactly to win.
         </p>
       </header>
@@ -173,7 +313,14 @@ export function TPuzzleGame() {
         </span>
       </div>
 
-      <div className="relative mx-auto rounded-3xl border border-amber-300 bg-[#f7df1e] p-4 shadow-lg">
+      <div
+        className="relative mx-auto rounded-3xl border border-amber-300 bg-[#f7df1e] p-4 shadow-lg"
+        style={{ touchAction: "none" }}
+        onPointerDownCapture={handleBoardPointerDownCapture}
+        onPointerMoveCapture={handleBoardPointerMoveCapture}
+        onPointerUpCapture={handleBoardPointerUpCapture}
+        onPointerCancelCapture={handleBoardPointerUpCapture}
+      >
         <svg
           ref={svgRef}
           viewBox={`0 0 ${boardWidth} ${boardHeight}`}
@@ -210,13 +357,14 @@ export function TPuzzleGame() {
               piece={piece}
               selected={selectedId === piece.id}
               disabled={solved}
-              onSelect={setSelectedId}
+              boardRotating={boardRotating}
+              gestureLockRef={gestureLockRef}
+              onSelect={handleSelect}
               onChange={updatePiece}
               onDragEnd={handleDragEnd}
             />
           ))}
         </svg>
-
       </div>
 
       {showSolvedPopup ? (
@@ -276,12 +424,18 @@ export function TPuzzleGame() {
             {isFinePointer ? (
               <>
                 <li>Scroll over a selected piece to rotate in 90° steps.</li>
-                <li>Twist with two fingers to rotate freely (release to keep the angle).</li>
+                <li>
+                  Select a piece, then twist with two fingers anywhere on the
+                  board to rotate freely.
+                </li>
                 <li>Double-click a selected piece to flip it.</li>
               </>
             ) : (
               <>
-                <li>Twist with two fingers to rotate freely; release to keep the angle.</li>
+                <li>
+                  Select a piece, then twist with two fingers anywhere on the
+                  board; release to keep the angle.
+                </li>
                 <li>Double-tap a selected piece to flip it.</li>
               </>
             )}
