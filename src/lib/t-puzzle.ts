@@ -84,14 +84,36 @@ export const BOARD_HEIGHT = 4 * UNIT;
 export const BOARD_PADDING = 48;
 export const TRAY_HEIGHT = 180;
 
-const T_MASK: boolean[][] = [
+/**
+ * Target T silhouette as a cell mask (true = must be filled).
+ * Change this to alter the solved shape.
+ */
+export const T_MASK: boolean[][] = [
   [true, true, true],
   [false, true, false],
   [false, true, false],
   [false, true, false],
 ];
 
-const SAMPLE_STEP = UNIT / 8;
+/**
+ * Tunable solve strictness.
+ * - Raise `minTargetCellCoverage` / lower `maxEmptyCellCoverage` to tighten.
+ * - Raise `sampleGridSize` for finer sampling.
+ * - Raise `minTargetCellsPerPiece` so pieces must sit more firmly on the T.
+ * - Raise `maxMismatchedCells` to allow near-miss solutions.
+ */
+export const SOLVE_CONFIG = {
+  /** Samples per cell edge (N×N grid inside each board cell). */
+  sampleGridSize: 12,
+  /** Min filled-sample fraction for a T cell to count as covered. */
+  minTargetCellCoverage: 0.85,
+  /** Max filled-sample fraction allowed in a non-T (empty) cell. */
+  maxEmptyCellCoverage: 0.15,
+  /** Min T-cell centers a piece must cover to count as placed on the board. */
+  minTargetCellsPerPiece: 1,
+  /** How many mask cells may mismatch and still count as solved (0 = exact). */
+  maxMismatchedCells: 0,
+} as const;
 
 export function getPieceDefinition(id: PieceId): PieceDefinition {
   const piece = PIECE_DEFINITIONS.find((entry) => entry.id === id);
@@ -160,11 +182,13 @@ function pointInPolygon(point: Point, polygon: Point[]): boolean {
   return inside;
 }
 
-function rasterizeCoverage(pieces: PieceState[]): boolean[][] {
+function cellCoverageFractions(pieces: PieceState[]): number[][] {
   const rows = T_MASK.length;
   const cols = T_MASK[0].length;
-  const coverage = Array.from({ length: rows }, () =>
-    Array.from({ length: cols }, () => false),
+  const grid = SOLVE_CONFIG.sampleGridSize;
+  const sampleStep = UNIT / grid;
+  const fractions = Array.from({ length: rows }, () =>
+    Array.from({ length: cols }, () => 0),
   );
 
   const polygons = pieces.map((piece) => getTransformedPoints(piece));
@@ -174,10 +198,10 @@ function rasterizeCoverage(pieces: PieceState[]): boolean[][] {
       let hits = 0;
       let samples = 0;
 
-      for (let sy = 0; sy < 8; sy += 1) {
-        for (let sx = 0; sx < 8; sx += 1) {
-          const x = col * UNIT + (sx + 0.5) * SAMPLE_STEP;
-          const y = row * UNIT + (sy + 0.5) * SAMPLE_STEP;
+      for (let sy = 0; sy < grid; sy += 1) {
+        for (let sx = 0; sx < grid; sx += 1) {
+          const x = col * UNIT + (sx + 0.5) * sampleStep;
+          const y = row * UNIT + (sy + 0.5) * sampleStep;
           samples += 1;
           if (polygons.some((polygon) => pointInPolygon([x, y], polygon))) {
             hits += 1;
@@ -185,15 +209,16 @@ function rasterizeCoverage(pieces: PieceState[]): boolean[][] {
         }
       }
 
-      coverage[row][col] = hits / samples > 0.5;
+      fractions[row][col] = hits / samples;
     }
   }
 
-  return coverage;
+  return fractions;
 }
 
-function pieceCoversTarget(boardPiece: PieceState): boolean {
+function countTargetCellsCovered(boardPiece: PieceState): number {
   const polygon = getTransformedPoints(boardPiece);
+  let covered = 0;
 
   for (let row = 0; row < T_MASK.length; row += 1) {
     for (let col = 0; col < T_MASK[row].length; col += 1) {
@@ -204,12 +229,12 @@ function pieceCoversTarget(boardPiece: PieceState): boolean {
       const centerX = col * UNIT + UNIT / 2;
       const centerY = row * UNIT + UNIT / 2;
       if (pointInPolygon([centerX, centerY], polygon)) {
-        return true;
+        covered += 1;
       }
     }
   }
 
-  return false;
+  return covered;
 }
 
 export function isPuzzleSolved(pieces: PieceState[]): boolean {
@@ -219,21 +244,32 @@ export function isPuzzleSolved(pieces: PieceState[]): boolean {
     y: piece.y - BOARD_PADDING,
   }));
 
-  if (!boardPieces.every((piece) => pieceCoversTarget(piece))) {
+  if (
+    !boardPieces.every(
+      (piece) =>
+        countTargetCellsCovered(piece) >= SOLVE_CONFIG.minTargetCellsPerPiece,
+    )
+  ) {
     return false;
   }
 
-  const coverage = rasterizeCoverage(boardPieces);
+  const fractions = cellCoverageFractions(boardPieces);
+  let mismatches = 0;
 
   for (let row = 0; row < T_MASK.length; row += 1) {
     for (let col = 0; col < T_MASK[row].length; col += 1) {
-      if (coverage[row][col] !== T_MASK[row][col]) {
-        return false;
+      const fraction = fractions[row][col];
+      const cellOk = T_MASK[row][col]
+        ? fraction >= SOLVE_CONFIG.minTargetCellCoverage
+        : fraction <= SOLVE_CONFIG.maxEmptyCellCoverage;
+
+      if (!cellOk) {
+        mismatches += 1;
       }
     }
   }
 
-  return true;
+  return mismatches <= SOLVE_CONFIG.maxMismatchedCells;
 }
 
 export function createInitialPieces(): PieceState[] {
