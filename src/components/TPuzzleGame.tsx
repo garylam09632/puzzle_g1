@@ -1,11 +1,33 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { PuzzlePiece } from "@/components/PuzzlePiece";
+import { TutorialCoachMarks } from "@/components/TutorialCoachMarks";
+import {
+  DIFFICULTY_LABELS,
+  type Difficulty,
+} from "@/lib/difficulty";
 import {
   normalizeAngleDelta,
   pointerPairAngle,
 } from "@/lib/pointer-gesture";
+import {
+  getBests,
+  getSettings,
+  isTutorialCompleted,
+  markTutorialDone,
+  recordStart,
+  recordWin,
+  setSettings,
+  type DifficultyBests,
+} from "@/lib/storage";
 import {
   BOARD_HEIGHT,
   BOARD_PADDING,
@@ -20,7 +42,6 @@ import {
   type PieceId,
   type PieceState,
 } from "@/lib/t-puzzle";
-import { useFinePointer } from "@/lib/useMediaQuery";
 
 type RotateGestureState = {
   startAngle: number;
@@ -29,16 +50,58 @@ type RotateGestureState = {
   finished: boolean;
 };
 
-export function TPuzzleGame() {
-  const isFinePointer = useFinePointer();
+type TPuzzleGameProps = {
+  difficulty: Difficulty;
+};
+
+let storageEpoch = 0;
+const storageListeners = new Set<() => void>();
+
+function emitStorageChange() {
+  storageEpoch += 1;
+  for (const listener of storageListeners) {
+    listener();
+  }
+}
+
+function subscribeStorage(onStoreChange: () => void) {
+  storageListeners.add(onStoreChange);
+  return () => {
+    storageListeners.delete(onStoreChange);
+  };
+}
+
+function getStorageEpoch() {
+  return storageEpoch;
+}
+
+export function TPuzzleGame({ difficulty }: TPuzzleGameProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const playAgainRef = useRef<HTMLButtonElement>(null);
+  const winRecordedRef = useRef(false);
+  const startRecordedFor = useRef<Difficulty | null>(null);
   const [pieces, setPieces] = useState<PieceState[]>(createInitialPieces);
   const [selectedId, setSelectedId] = useState<PieceId | null>(null);
   const [solved, setSolved] = useState(false);
   const [showSolvedPopup, setShowSolvedPopup] = useState(false);
   const [moves, setMoves] = useState(0);
   const [boardRotating, setBoardRotating] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [tutorialDismissed, setTutorialDismissed] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [isNewBest, setIsNewBest] = useState(false);
+  const [winBests, setWinBests] = useState<DifficultyBests | null>(null);
+
+  const isClient = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+  useSyncExternalStore(subscribeStorage, getStorageEpoch, () => 0);
+  const soundEnabled = isClient ? getSettings().soundEnabled : true;
+  const tutorialDone = isClient ? isTutorialCompleted() : true;
+  const showTutorial = isClient && !tutorialDone && !tutorialDismissed;
+  const tierBests = winBests ?? (isClient ? getBests()[difficulty] : { wins: 0, starts: 0 });
 
   const piecesRef = useRef(pieces);
   const selectedIdRef = useRef(selectedId);
@@ -60,6 +123,23 @@ export function TPuzzleGame() {
   useEffect(() => {
     solvedRef.current = solved;
   }, [solved]);
+
+  useEffect(() => {
+    if (startRecordedFor.current === difficulty) {
+      return;
+    }
+    startRecordedFor.current = difficulty;
+    recordStart(difficulty);
+    emitStorageChange();
+  }, [difficulty]);
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+    const timer = window.setTimeout(() => setToast(null), 2200);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const boardWidth = BOARD_WIDTH + BOARD_PADDING * 2;
   const boardHeight = BOARD_HEIGHT + BOARD_PADDING * 2 + TRAY_HEIGHT;
@@ -84,6 +164,9 @@ export function TPuzzleGame() {
   };
 
   const handleSelect = (id: PieceId) => {
+    if (paused || showTutorial) {
+      return;
+    }
     selectedIdRef.current = id;
     setSelectedId(id);
   };
@@ -94,6 +177,17 @@ export function TPuzzleGame() {
       setShowSolvedPopup(true);
     }
   };
+
+  useEffect(() => {
+    if (!solved || !showSolvedPopup || winRecordedRef.current) {
+      return;
+    }
+    winRecordedRef.current = true;
+    const result = recordWin(difficulty, moves);
+    setWinBests(result.bests[difficulty]);
+    setIsNewBest(result.isNewBest);
+    emitStorageChange();
+  }, [solved, showSolvedPopup, moves, difficulty]);
 
   useEffect(() => {
     if (!showSolvedPopup) {
@@ -113,6 +207,9 @@ export function TPuzzleGame() {
   }, [showSolvedPopup]);
 
   const handleDragEnd = () => {
+    if (paused) {
+      return;
+    }
     setMoves((count) => count + 1);
     setPieces((current) => {
       checkSolution(current);
@@ -122,7 +219,7 @@ export function TPuzzleGame() {
 
   const beginBoardRotate = () => {
     const pieceId = selectedIdRef.current;
-    if (!pieceId || solvedRef.current) {
+    if (!pieceId || solvedRef.current || paused || showTutorial) {
       return;
     }
 
@@ -162,7 +259,7 @@ export function TPuzzleGame() {
   const handleBoardPointerDownCapture = (
     event: React.PointerEvent<HTMLDivElement>,
   ) => {
-    if (solvedRef.current || showSolvedPopup) {
+    if (solvedRef.current || showSolvedPopup || paused || showTutorial) {
       return;
     }
 
@@ -219,7 +316,7 @@ export function TPuzzleGame() {
   };
 
   const handleRotateSelected = () => {
-    if (!selectedId || solved) {
+    if (!selectedId || solved || paused) {
       return;
     }
 
@@ -236,7 +333,7 @@ export function TPuzzleGame() {
   };
 
   const handleFlipSelected = () => {
-    if (!selectedId || solved) {
+    if (!selectedId || solved || paused) {
       return;
     }
 
@@ -260,61 +357,101 @@ export function TPuzzleGame() {
     setSolved(false);
     setShowSolvedPopup(false);
     setMoves(0);
+    setPaused(false);
+    setIsNewBest(false);
+    winRecordedRef.current = false;
+    setWinBests(null);
+    recordStart(difficulty);
+    emitStorageChange();
   };
 
   const handleDismissSolvedPopup = () => {
     setShowSolvedPopup(false);
   };
 
+  const toggleSound = () => {
+    setSettings({ soundEnabled: !soundEnabled });
+    emitStorageChange();
+  };
+
+  const completeTutorial = () => {
+    markTutorialDone();
+    setTutorialDismissed(true);
+    emitStorageChange();
+  };
+
+  const controlsLocked = solved || paused || showTutorial;
+
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-8">
-      <header className="space-y-2 text-center">
-        <p className="text-sm font-medium uppercase tracking-[0.2em] text-amber-700">
-          T Puzzle
-        </p>
-        <h1 className="text-3xl font-bold text-zinc-900 sm:text-4xl">
-          Form the letter T
-        </h1>
-        <p className="mx-auto max-w-2xl text-base text-zinc-600">
-          Drag the four pieces onto the faded T outline.{" "}
-          {isFinePointer
-            ? "Scroll over a selected piece to rotate; double-click to flip. Or select a piece and twist with two fingers anywhere on the board."
-            : "Select a piece, then twist with two fingers anywhere on the board to rotate freely; double-tap a selected piece to flip."}{" "}
-          Fill the T exactly to win.
-        </p>
+    <div className="safe-pad mx-auto flex w-full max-w-4xl flex-col gap-4 px-3 pb-6 pt-3 sm:gap-5 sm:px-4 sm:pt-5">
+      <header className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-display text-lg font-semibold tracking-tight text-[var(--ink)] sm:text-xl">
+            Form Fit
+          </p>
+          <p className="truncate text-xs font-medium uppercase tracking-[0.18em] text-[var(--accent-deep)]">
+            {DIFFICULTY_LABELS[difficulty]} · Demo shape
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="rounded-full bg-[var(--board)]/35 px-3 py-1.5 text-sm font-semibold text-[var(--ink)]">
+            Moves {moves}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPaused(true)}
+            className="rounded-full border border-[var(--ink)]/15 bg-[var(--surface)] px-3 py-1.5 text-sm font-semibold text-[var(--ink)]"
+          >
+            Pause
+          </button>
+        </div>
       </header>
 
-      <div className="flex flex-wrap items-center justify-center gap-3">
+      <div className="flex flex-wrap items-center justify-center gap-2">
         <button
           type="button"
           onClick={handleRotateSelected}
-          disabled={!selectedId || solved}
-          className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:bg-zinc-300"
+          disabled={!selectedId || controlsLocked}
+          className="rounded-full bg-[var(--ink)] px-3.5 py-2 text-sm font-medium text-[#f7f3ea] transition hover:bg-[#2c261e] disabled:cursor-not-allowed disabled:bg-[var(--ink)]/25"
         >
-          Rotate selected
+          Rotate
         </button>
         <button
           type="button"
           onClick={handleFlipSelected}
-          disabled={!selectedId || solved}
-          className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-zinc-500 hover:text-zinc-900 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:text-zinc-300"
+          disabled={!selectedId || controlsLocked}
+          className="rounded-full border border-[var(--ink)]/20 bg-[var(--surface)] px-3.5 py-2 text-sm font-medium text-[var(--ink)] transition hover:border-[var(--ink)]/40 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Flip selected
+          Flip
         </button>
         <button
           type="button"
           onClick={handleReset}
-          className="rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-zinc-500 hover:text-zinc-900"
+          disabled={paused || showTutorial}
+          className="rounded-full border border-[var(--ink)]/20 bg-[var(--surface)] px-3.5 py-2 text-sm font-medium text-[var(--ink)] transition hover:border-[var(--ink)]/40 disabled:opacity-40"
         >
-          Reset puzzle
+          Reset
         </button>
-        <span className="rounded-full bg-amber-100 px-4 py-2 text-sm font-medium text-amber-900">
-          Moves: {moves}
-        </span>
+        <button
+          type="button"
+          onClick={() => setToast("Hints arrive in a later update.")}
+          disabled={controlsLocked}
+          className="rounded-full border border-[var(--ink)]/20 bg-[var(--surface)] px-3.5 py-2 text-sm font-medium text-[var(--ink)] transition hover:border-[var(--ink)]/40 disabled:opacity-40"
+        >
+          Hint
+        </button>
+        <button
+          type="button"
+          onClick={() => setToast("Undo arrives in a later update.")}
+          disabled={controlsLocked}
+          className="rounded-full border border-[var(--ink)]/20 bg-[var(--surface)] px-3.5 py-2 text-sm font-medium text-[var(--ink)] transition hover:border-[var(--ink)]/40 disabled:opacity-40"
+        >
+          Undo
+        </button>
       </div>
 
       <div
-        className="relative mx-auto rounded-3xl border border-amber-300 bg-[#f7df1e] p-4 shadow-lg"
+        className="relative mx-auto w-full max-w-[min(100%,36rem)] rounded-3xl border border-[var(--board-edge)] bg-[var(--board)] p-3 shadow-[0_18px_40px_rgba(28,25,20,0.12)] sm:p-4"
         style={{ touchAction: "none" }}
         onPointerDownCapture={handleBoardPointerDownCapture}
         onPointerMoveCapture={handleBoardPointerMoveCapture}
@@ -324,9 +461,9 @@ export function TPuzzleGame() {
         <svg
           ref={svgRef}
           viewBox={`0 0 ${boardWidth} ${boardHeight}`}
-          className="h-auto w-full max-w-2xl overflow-visible"
+          className="h-auto w-full overflow-visible"
           role="img"
-          aria-label="T puzzle board"
+          aria-label="Form Fit puzzle board"
         >
           <rect
             x={0}
@@ -334,7 +471,7 @@ export function TPuzzleGame() {
             width={boardWidth}
             height={boardHeight}
             rx={24}
-            fill="#f7df1e"
+            fill="#f0c419"
           />
           <polygon
             points={tOutline}
@@ -346,9 +483,9 @@ export function TPuzzleGame() {
           <text
             x={boardOffsetX}
             y={boardOffsetY + BOARD_HEIGHT + 36}
-            className="fill-zinc-700 text-[12px] font-medium"
+            className="fill-[var(--ink)] text-[12px] font-medium opacity-70"
           >
-            Drag pieces from the tray below into the T.
+            Tray — drag pieces into the silhouette
           </text>
           {pieces.map((piece) => (
             <PuzzlePiece
@@ -356,7 +493,7 @@ export function TPuzzleGame() {
               svgRef={svgRef}
               piece={piece}
               selected={selectedId === piece.id}
-              disabled={solved}
+              disabled={solved || paused || showTutorial}
               boardRotating={boardRotating}
               gestureLockRef={gestureLockRef}
               onSelect={handleSelect}
@@ -367,9 +504,68 @@ export function TPuzzleGame() {
         </svg>
       </div>
 
+      {toast ? (
+        <div
+          className="toast-in fixed bottom-[max(1.25rem,var(--safe-bottom))] left-1/2 z-40 w-[min(90vw,20rem)] -translate-x-1/2 rounded-2xl bg-[var(--ink)] px-4 py-3 text-center text-sm font-medium text-[#f7f3ea] shadow-lg"
+          role="status"
+        >
+          {toast}
+        </div>
+      ) : null}
+
+      {showTutorial ? (
+        <TutorialCoachMarks onComplete={completeTutorial} />
+      ) : null}
+
+      {paused ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--ink)]/45 p-4 backdrop-blur-[2px]"
+          role="presentation"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pause-title"
+            className="w-full max-w-sm rounded-3xl border border-[var(--ink)]/10 bg-[#f7fbfb] px-6 py-7 text-center shadow-xl"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-deep)]">
+              Paused
+            </p>
+            <h2
+              id="pause-title"
+              className="font-display mt-3 text-3xl font-semibold text-[var(--ink)]"
+            >
+              Take a breath
+            </h2>
+            <div className="mt-6 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => setPaused(false)}
+                className="rounded-2xl bg-[var(--ink)] px-5 py-2.5 text-sm font-semibold text-[#f7f3ea]"
+              >
+                Resume
+              </button>
+              <button
+                type="button"
+                onClick={toggleSound}
+                className="rounded-2xl border border-[var(--ink)]/15 px-5 py-2.5 text-sm font-medium text-[var(--ink)]"
+              >
+                Sound: {soundEnabled ? "On" : "Off"}
+              </button>
+              <Link
+                href="/"
+                className="rounded-2xl px-5 py-2.5 text-sm font-medium text-[var(--ink-muted)] hover:text-[var(--ink)]"
+              >
+                Home
+              </Link>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {showSolvedPopup ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/45 p-4 backdrop-blur-[2px]"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--ink)]/45 p-4 backdrop-blur-[2px]"
           role="presentation"
           onClick={handleDismissSolvedPopup}
         >
@@ -378,79 +574,54 @@ export function TPuzzleGame() {
             aria-modal="true"
             aria-labelledby="solved-title"
             aria-describedby="solved-description"
-            className="solved-popup w-full max-w-sm rounded-3xl border border-amber-200 bg-white px-6 py-7 text-center shadow-2xl"
+            className="solved-popup w-full max-w-sm rounded-3xl border border-[var(--board-edge)]/40 bg-[#f7fbfb] px-6 py-7 text-center shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
-              Puzzle complete
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent-deep)]">
+              {DIFFICULTY_LABELS[difficulty]} clear
             </p>
             <h2
               id="solved-title"
-              className="mt-3 text-3xl font-bold tracking-tight text-zinc-900"
+              className="font-display mt-3 text-3xl font-semibold tracking-tight text-[var(--ink)]"
             >
-              You solved it!
+              Nice fit!
             </h2>
-            <p id="solved-description" className="mt-2 text-sm text-zinc-600">
-              The four pieces form a perfect T in{" "}
-              <span className="font-semibold text-zinc-800">{moves}</span> moves.
+            <p id="solved-description" className="mt-2 text-sm text-[var(--ink-muted)]">
+              Solved in{" "}
+              <span className="font-semibold text-[var(--ink)]">{moves}</span>{" "}
+              moves
+              {isNewBest ? " · New best!" : null}
+              {!isNewBest && typeof tierBests.bestMoves === "number"
+                ? ` · Best ${tierBests.bestMoves}`
+                : null}
+              .
             </p>
             <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
               <button
                 ref={playAgainRef}
                 type="button"
                 onClick={handleReset}
-                className="rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-700"
+                className="rounded-2xl bg-[var(--ink)] px-5 py-2.5 text-sm font-semibold text-[#f7f3ea] transition hover:bg-[#2c261e]"
               >
                 Play again
               </button>
-              <button
-                type="button"
-                onClick={handleDismissSolvedPopup}
-                className="rounded-full border border-zinc-300 px-5 py-2.5 text-sm font-medium text-zinc-700 transition hover:border-zinc-500 hover:text-zinc-900"
+              <Link
+                href="/"
+                className="rounded-2xl border border-[var(--ink)]/15 px-5 py-2.5 text-sm font-medium text-[var(--ink)] transition hover:border-[var(--ink)]/35"
               >
-                Keep viewing
-              </button>
+                Home
+              </Link>
             </div>
+            <button
+              type="button"
+              onClick={handleDismissSolvedPopup}
+              className="mt-3 text-sm font-medium text-[var(--ink-muted)] hover:text-[var(--ink)]"
+            >
+              Keep viewing
+            </button>
           </div>
         </div>
       ) : null}
-
-      <section className="mx-auto grid max-w-2xl gap-3 text-sm text-zinc-600 sm:grid-cols-2">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-          <h2 className="font-semibold text-zinc-900">How to play</h2>
-          <ul className="mt-2 list-disc space-y-1 pl-5">
-            <li>Click a piece to select it.</li>
-            <li>Drag pieces over the faded T guide.</li>
-            {isFinePointer ? (
-              <>
-                <li>Scroll over a selected piece to rotate in 90° steps.</li>
-                <li>
-                  Select a piece, then twist with two fingers anywhere on the
-                  board to rotate freely.
-                </li>
-                <li>Double-click a selected piece to flip it.</li>
-              </>
-            ) : (
-              <>
-                <li>
-                  Select a piece, then twist with two fingers anywhere on the
-                  board; release to keep the angle.
-                </li>
-                <li>Double-tap a selected piece to flip it.</li>
-              </>
-            )}
-            <li>Or use the Rotate / Flip buttons as shortcuts.</li>
-          </ul>
-        </div>
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-          <h2 className="font-semibold text-zinc-900">About the puzzle</h2>
-          <p className="mt-2">
-            The T Puzzle uses four polygons — one triangle, two trapezoids, and a
-            notched pentagon — to build a symmetric capital T. It looks easy, but the
-            unusual pentagon piece makes it surprisingly tricky.
-          </p>
-        </div>
-      </section>
     </div>
   );
 }

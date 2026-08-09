@@ -1,28 +1,83 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #e7eef0;
+  --foreground: #142022;
+  --ink: #142022;
+  --ink-muted: #4a5a5e;
+  --surface: rgba(248, 252, 252, 0.9);
+  --accent: #1f7a6c;
+  --accent-deep: #15574d;
+  --board: #f0c419;
+  --board-edge: #d4a50f;
+  --haze: #cfdfe3;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-dm-sans);
+  --font-display: var(--font-fraunces);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-dm-sans), "Segoe UI", sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-fraunces), Georgia, serif;
+}
+
+.safe-pad {
+  padding-top: max(0.75rem, var(--safe-top));
+  padding-right: max(1rem, var(--safe-right));
+  padding-bottom: max(0.75rem, var(--safe-bottom));
+  padding-left: max(1rem, var(--safe-left));
+}
+
+.app-atmosphere {
+  background:
+    radial-gradient(120% 80% at 12% 8%, rgba(207, 223, 227, 0.95) 0%, transparent 55%),
+    radial-gradient(90% 70% at 88% 18%, rgba(240, 196, 25, 0.24) 0%, transparent 50%),
+    linear-gradient(165deg, #eef4f5 0%, #e7eef0 45%, #d9e4e2 100%);
+}
+
+.app-atmosphere::before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cpath fill='%231c1914' fill-opacity='0.04' d='M0 60h120M60 0v120'/%3E%3C/svg%3E");
+  background-size: 120px 120px;
+}
+
+@keyframes hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes hero-glow {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes solved-popup-in {
@@ -36,12 +91,43 @@ body {
   }
 }
 
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-rise {
+  animation: hero-rise 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hero-rise-delay {
+  animation: hero-rise 700ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+}
+
+.hero-glow {
+  animation: hero-glow 900ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+}
+
 .solved-popup {
   animation: solved-popup-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.toast-in {
+  animation: toast-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .solved-popup {
+  .hero-rise,
+  .hero-rise-delay,
+  .hero-glow,
+  .solved-popup,
+  .toast-in {
     animation: none;
   }
 }

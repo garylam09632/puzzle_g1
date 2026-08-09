@@ -2,7 +2,7 @@
 
 Initial product and engineering plan for evolving the current playable MVP into a full web + store app experience.
 
-**Status:** Draft (active) — **Stage 00 done**; next coding stage **Stage 01**  
+**Status:** Draft (active) — **Stages 00–01 done**; next coding stage **Stage 02**  
 **Working title:** Form Fit (final rename before Stage 03 store packaging)  
 **Progress tracker:** [`PROGRESS.md`](./PROGRESS.md)  
 **Stage docs:** [`stages/`](./stages/)  
@@ -236,7 +236,7 @@ Launch → Home
 
 ## 8. Phased roadmap
 
-**Kickoff:** Phase 0 / Stage 00 is **done**. Next: **Phase 1 / Stage 01** ([`stages/01-app-shell-and-session.md`](./stages/01-app-shell-and-session.md)) for the first coding work. Track boxes in §17 and in each stage file; roll up status in [`PROGRESS.md`](./PROGRESS.md).
+**Kickoff:** Phases 0–1 / Stages 00–01 are **done**. Next: **Phase 2 / Stage 02** ([`stages/02-difficulty-pools-and-dailies.md`](./stages/02-difficulty-pools-and-dailies.md)). Track boxes in §17 and in each stage file; roll up status in [`PROGRESS.md`](./PROGRESS.md).
 
 ### Phase 0 — Product foundation
 
@@ -495,12 +495,12 @@ Use these as phase-level roll-ups. Prefer checking detailed items in the stage f
 
 ### Phase 1 — App shell & session polish
 
-- [ ] Home with Play + Daily entry
-- [ ] Difficulty picker
-- [ ] Play HUD + tutorial + polished win
-- [ ] Persistence (settings / tutorial / bests structure)
-- [ ] Responsive + lint/build/Pages deploy
-- [ ] Stage 01 exit criteria met → [`stages/01-app-shell-and-session.md`](./stages/01-app-shell-and-session.md)
+- [x] Home with Play + Daily entry
+- [x] Difficulty picker
+- [x] Play HUD + tutorial + polished win
+- [x] Persistence (settings / tutorial / bests structure)
+- [x] Responsive + lint/build/Pages deploy
+- [x] Stage 01 exit criteria met → [`stages/01-app-shell-and-session.md`](./stages/01-app-shell-and-session.md)
 
 ### Phase 2 — Difficulty pools, content & dailies
 
