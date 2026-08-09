@@ -236,7 +236,7 @@ Launch → Home
 
 ## 8. Phased roadmap
 
-**Kickoff:** Start at **Phase 0 / Stage 00** ([`stages/00-product-foundation.md`](./stages/00-product-foundation.md)), then **Phase 1 / Stage 01** for the first coding work. Track boxes in §17 and in each stage file; roll up status in [`PROGRESS.md`](./PROGRESS.md).
+**Kickoff:** Phase 0 / Stage 00 is **done**. Next: **Phase 1 / Stage 01** ([`stages/01-app-shell-and-session.md`](./stages/01-app-shell-and-session.md)) for the first coding work. Track boxes in §17 and in each stage file; roll up status in [`PROGRESS.md`](./PROGRESS.md).
 
 ### Phase 0 — Product foundation
 
