@@ -2,9 +2,10 @@
 
 Initial product and engineering plan for evolving the current playable MVP into a full web + store app experience.
 
-**Status:** Draft (updated with product naming & multi-shape content decisions)  
+**Status:** Draft (updated with Sudoku.com-like difficulty + daily model)  
 **Surfaces:** Website, iOS App Store, Google Play  
-**Live web preview (MVP):** https://garylam09632.github.io/puzzle_g1/
+**Live web preview (MVP):** https://garylam09632.github.io/puzzle_g1/  
+**Reference product pattern:** Sudoku.com (Easybrain) — difficulty ladder, large puzzle pool, daily challenges with archive/rewards, per-difficulty stats
 
 ---
 
@@ -15,7 +16,7 @@ A polished, offline-capable **silhouette packing puzzle** app: players assemble 
 | Goal | Meaning |
 | --- | --- |
 | Delight | Clear first-run teaching, satisfying drag/rotate/flip, strong win moment |
-| Retention | Multi-shape levels, daily challenges, personal bests |
+| Retention | Difficulty ladder, large puzzle pool, daily challenges + archive/rewards, personal bests |
 | Reach | Web (shareable links) + store apps (home screen, offline, store discovery) |
 | Accessibility | Keyboard/pointer/touch, reduced motion, readable UI, store a11y baselines |
 
@@ -40,17 +41,92 @@ The durable product fantasy is:
 - Final brand TBD in Phase 0; lean toward names about **shape / fit / silhouette / form** (examples of direction only: Silhouette, Form Fit, Shapecraft, Dissect, Outline).
 - Once a name is locked: update UI strings, `README`, store listings, and this plan’s title.
 
-### Content pillars
+### Content pillars (Sudoku.com-like)
 
 | Pillar | Intent |
 | --- | --- |
-| Campaign / level select | Curated multi-shape levels with progression |
-| Daily challenge | One deterministic challenge per day; reason to return |
-| Free play (optional) | Replay favorites / practice without campaign gates |
+| Play by difficulty | Player picks a named difficulty, then gets a puzzle from that tier’s pool |
+| Puzzle library | Large bank of validated multi-shape puzzles (not only one demo T) |
+| Daily challenge | Calendar “puzzle of the day” + archive + trophies / streak feel |
+| Comfort tools | Hints, undo, optional snap/assist — available across difficulties; hard mode is in the **puzzle**, not by stripping tools |
+| Stats | Track bests and completion **per difficulty** (and for dailies) |
 
 ---
 
-## 3. Platform strategy
+## 3. Challenge model (inspired by Sudoku.com)
+
+Same **core rules** at every tier: fit the pieces into the target silhouette. Challenge comes from **content scaling** and **daily cadence**, not from changing the fundamental game.
+
+### 3.1 Difficulty ladder
+
+Ship a clear named ladder (labels can be tuned in Phase 0; structure is fixed):
+
+| Tier (working names) | Player expectation | How we scale challenge for shape puzzles |
+| --- | --- | --- |
+| Easy | Teach & warm up | Simpler silhouettes, fewer / friendlier pieces, flips allowed, generous tray, optional light snap |
+| Medium | Casual workout | More awkward shapes, tighter packing, standard piece count |
+| Hard | Real effort | Complex silhouettes, flips restricted or required cleverly, less visual guidance |
+| Expert | Dedicated solvers | Harder dissections, stricter placement feel, fewer assists in *content* (e.g. no outline fill hints baked in) |
+| Master / Extreme (optional later) | Long-term ceiling | Largest / most deceptive shapes, tight pars, advanced variants |
+
+**Sudoku.com parallel:** Easy→Extreme mainly changes clue count and logic depth; we change **silhouette complexity, piece awkwardness, rule modifiers, and guidance**.
+
+**Product rules for the ladder**
+
+- Home / Play entry: **choose difficulty** (primary path), not only a linear campaign map.
+- Each difficulty owns a **pool of puzzles**; starting a run deals (or lets the player pick) one from that pool.
+- Every puzzle still has **at least one validated solution** under the solve checker.
+- Assists (hint, undo, snap toggle) stay available unless the player opts into a “no assists” personal challenge later.
+- **Stats per difficulty:** games started/won, best time, best moves, current/longest streak (where relevant).
+
+### 3.2 Classic / free play pool
+
+- Maintain a growing library tagged by `difficulty` (+ shape family, piece set, estimated solve time).
+- v1 target: enough puzzles per tier that replay does not feel tiny (order-of-magnitude goal: **dozens+ per tier** over time; launch can start smaller and expand).
+- Demo T ships as an **Easy** (or tutorial) pool entry — not the whole game.
+- Optional later: “Continue” unfinished puzzle (Sudoku.com-style auto-save).
+
+### 3.3 Daily challenges
+
+Mirror Sudoku.com’s daily loop:
+
+| Element | Our version |
+| --- | --- |
+| Puzzle of the day | One primary daily challenge derived from date seed (deterministic, same for all players on that day) |
+| Difficulty of the daily | Either a featured tier for the day, or let the player pick daily Easy/Medium/Hard variants if we have capacity |
+| Archive | Calendar UI to replay past dailies (catch-up) |
+| Rewards | Trophies / badges for completing dailies; streak callouts; optional seasonal medal events (Phase 4) |
+| Share | Result card (time, moves, difficulty, date) |
+| Offline | Prefetch / embed upcoming or generate-from-seed locally so dailies work without a server |
+
+**Daily is a mode**, not a different ruleset: same piece interactions and win condition as classic play.
+
+### 3.4 Comfort tools (cross-cutting)
+
+Available in classic and daily (player choice):
+
+- Hints (progressive, rate-limited)
+- Undo / reset
+- Optional snap-to-angle on release
+- Pause
+- Notes-equivalent for us is light: e.g. “mark piece” or ghost outline toggle — keep minimal for v1
+
+Harder tiers should still feel harder **even with tools**, because the packing itself is harder.
+
+### 3.5 Mapping reference → our game
+
+| Sudoku.com | Our puzzle game |
+| --- | --- |
+| 9×9 grid, digits 1–9 | Silhouette board + polygon pieces |
+| Fewer givens / deeper logic | Harder shapes / piece sets / rule modifiers |
+| Pick Easy…Extreme then play | Pick Easy…Expert then play from that pool |
+| Daily Sudoku + archive + trophies | Daily shape challenge + archive + trophies |
+| Per-difficulty statistics | Same |
+| Hints, notes, undo, auto-check | Hints, undo, optional snap; solve check already validates completion |
+
+---
+
+## 4. Platform strategy
 
 Keep **one UI + game engine** (React / Next.js static export). Ship three surfaces from it:
 
@@ -76,7 +152,7 @@ Keep **one UI + game engine** (React / Next.js static export). Ship three surfac
 
 ---
 
-## 4. Current baseline (preserve)
+## 5. Current baseline (preserve)
 
 The repo already has a solid **core loop**. Treat the T demo as the first level/content pack and generalize the session around arbitrary shape levels.
 
@@ -99,7 +175,7 @@ Relevant paths today:
 
 ---
 
-## 5. Multi-shape puzzle design (feasible)
+## 6. Multi-shape puzzle design (feasible)
 
 **Yes — different target shapes can be designed and shipped as levels.**
 
@@ -130,67 +206,72 @@ Agents/humans can both author level data; shipping bar is **solvability + play-f
 
 Generalize demo-specific names over time:
 
-- Level schema: `{ id, targetMask, targetOutline, pieces, rules, par, … }`
-- Content under e.g. `src/content/levels/`
+- Level schema: `{ id, difficulty, targetMask, targetOutline, pieces, rules, par, … }`
+- Content under e.g. `src/content/levels/` pooled by difficulty
 - Keep solve/geometry pure and unit-tested per level pack
 
 ---
 
-## 6. Player journey
+## 7. Player journey
 
 ```text
 Launch → Home
-  → First-run tutorial (skippable; uses simple demo shape)
-  → Level select / Daily / Free play
+  → First-run tutorial (skippable; Easy demo shape)
+  → Choose mode:
+       Classic: pick difficulty → deal/select puzzle from that pool
+       Daily: today (or archive date) → optional daily difficulty → play
     → Play session (board for that shape)
-      → Hints (limited) → Pause / Settings
-      → Solved celebration → Stats / Share → Next level or Home
-  → Profile / Bests / Settings (sound, haptics, a11y)
+      → Hints / Undo → Pause / Settings
+      → Solved celebration → Stats (per difficulty) / Share / Trophy
+      → Play another (same difficulty) or Home
+  → Statistics / Settings (sound, haptics, a11y)
 ```
 
-**First viewport job:** brand + one clear CTA (“Play”) + atmosphere — not a control dashboard.
+**First viewport job:** brand + clear CTAs for **Play** (difficulty) and **Daily** — not a control dashboard.
 
 ---
 
-## 7. Phased roadmap
+## 8. Phased roadmap
 
 ### Phase 0 — Product foundation
 
 - Lock **final app name**, visual direction, target age, monetization (free / ads / IAP)
+- Lock difficulty tier names/count (default proposal: Easy → Medium → Hard → Expert; Master later)
 - Expand this plan into focused docs as needed (`PRODUCT`, `UX`, `ARCHITECTURE`, `LEVELS`, `STORE_CHECKLIST`)
-- Define success metrics: time-to-first-solve, solve rate, daily completion, return visits (local proxy), crash-free sessions
+- Define success metrics: time-to-first-solve, solve rate **by difficulty**, daily completion / streak, return visits, crash-free sessions
 
 **Exit criteria:** scope and non-goals agreed; implementation can start without re-litigating v1.
 
 ### Phase 1 — App shell & session polish (web-first)
 
-**Goal:** feels like a game, not a demo page. Demo T remains the first playable level.
+**Goal:** feels like a game, not a demo page. Demo T remains an Easy-pool entry.
 
 | Workstream | Deliverables |
 | --- | --- |
-| Navigation | Home, Play, Result; static-export-safe routes |
-| Play HUD | Minimal controls: select affordances, reset, hint, pause — long help copy off the play surface |
+| Navigation | Home with **Play** + **Daily**; difficulty picker; Result; static-export-safe routes |
+| Play HUD | Minimal controls: reset, hint, undo, pause — long help copy off the play surface |
 | Onboarding | 3-step coach marks: select → drag → rotate/flip |
 | Feedback | Optional snap assist; piece lift; solve motion; SFX/haptics hooks |
-| Persistence | `localStorage`: settings, best moves/time, tutorial completed |
+| Persistence | `localStorage`: settings, continue puzzle, bests **per difficulty**, tutorial completed |
 | Responsive | Phone-first board scaling; safe-area insets; landscape rules |
 
 **Exit criteria:** new player understands controls without the README; win feels rewarding; progress survives refresh.
 
-### Phase 2 — Multi-shape content, progression & dailies
+### Phase 2 — Difficulty pools, multi-shape content & dailies
 
-**Goal:** reason to return beyond the demo T; product reads as a shape-puzzle game.
+**Goal:** Sudoku.com-like loop — pick a difficulty or play daily; content beyond the demo T.
 
 | Workstream | Deliverables |
 | --- | --- |
-| Level system | Data-driven levels: pieces, target mask/outline, tray layout, flip rules, par moves/time |
-| Content pack v1 | Demo T **plus** multiple **different shapes** (not only T rotations); validated solvable |
-| Progression | Unlock order; stars; level select |
-| Daily challenge | Deterministic seeded challenge of the day; shareable result card |
-| Hints | Progressive: highlight → rotation band → ghost pose (rate-limited) |
-| Authoring pipeline | Checklist/tests so new shapes cannot ship unsolvable |
+| Difficulty system | Named tiers; puzzle records tagged with `difficulty` |
+| Puzzle library v1 | Multi-shape pools per tier (demo T in Easy); each validated solvable |
+| Classic play | Pick difficulty → random/next puzzle from pool → complete → play another |
+| Stats | Per-difficulty best time/moves, wins; daily completion history |
+| Daily challenge | Date-seeded puzzle of the day; **archive calendar**; trophy/streak; share card |
+| Comfort tools | Progressive hints + undo (available across tiers) |
+| Authoring pipeline | Checklist/tests so new shapes cannot ship unsolvable or mistagged by difficulty |
 
-**Tech note:** keep geometry in `src/lib/`; level definitions under something like `src/content/levels/`; pure functions for seed → daily layout.
+**Tech note:** keep geometry in `src/lib/`; level definitions under `src/content/levels/` (or `…/by-difficulty/`); pure functions for date seed → daily puzzle id.
 
 ### Phase 3 — Store-ready packaging
 
@@ -209,8 +290,10 @@ Launch → Home
 
 ### Phase 4 — Growth & depth
 
+- Master / Extreme tier; larger pools per difficulty
+- Seasonal events / medals (Sudoku.com-style limited events)
 - Themes / piece skins
-- Achievements
+- Achievements beyond daily trophies
 - Optional cloud sync (only if accounts are justified)
 - Localization (EN first; add i18n keys early if more languages are planned)
 - Production web host + CI/CD (noted as future in the deploy rule)
@@ -218,22 +301,24 @@ Launch → Home
 
 ---
 
-## 8. Architecture guide
+## 9. Architecture guide
 
 Proposed shape (evolve toward; do not big-bang rewrite):
 
 ```text
 src/
-  app/                 # routes: home, play/[levelId], daily, settings (static-export safe)
+  app/                 # home, play, daily, daily/archive, stats, settings
   components/
     shell/             # AppChrome, header/nav
     play/              # Board, Piece, HUD, TutorialOverlay, WinModal
-    home/              # LevelSelect, DailyCard
-  content/levels/      # multi-shape level definitions
+    home/              # DifficultyPicker, DailyCard, ContinueCard
+    daily/             # ArchiveCalendar, TrophyToast
+  content/levels/      # multi-shape puzzles tagged by difficulty
   lib/
     puzzle/            # geometry + solve (generalized from t-puzzle.ts)
-    progress.ts        # local persistence
-    daily.ts           # date seed → challenge id
+    progress.ts        # local persistence, per-difficulty stats
+    daily.ts           # date seed → challenge id / puzzle
+    pool.ts            # pick next puzzle from difficulty pool
     audio.ts           # optional facade
     platform.ts        # web vs Capacitor capabilities
   styles/              # design tokens (CSS variables)
@@ -249,7 +334,7 @@ src/
 
 ---
 
-## 9. Experience pillars
+## 10. Experience pillars
 
 ### Controls
 
@@ -263,13 +348,14 @@ src/
 
 - First launch only by default; persistent “?” reopens coach marks.
 - Prefer show-don’t-tell over long copy on the play screen.
-- Tutorial may use the simple demo shape; campaign immediately shows that **shapes vary by level**.
+- Tutorial uses an Easy demo shape; home then surfaces **difficulty choice** and **Daily**.
 
 ### Difficulty & fairness
 
-- Keep `SOLVE_CONFIG` as the central strictness dial; allow per-level overrides later.
+- Difficulty is a **content tag + authoring budget**, not a different rules engine.
+- Keep `SOLVE_CONFIG` as the central placement strictness dial; allow per-puzzle overrides later.
 - Any “almost solved” feedback must not spoil the solution.
-- New shapes ship only after solvability validation.
+- New shapes ship only after solvability validation **and** a difficulty review (playtest or rubric).
 
 ### Audio / haptics
 
@@ -284,19 +370,19 @@ src/
 
 ---
 
-## 10. Accessibility & quality bar
+## 11. Accessibility & quality bar
 
 - Focus order for controls; dialog focus trap on win/pause modals
 - Honor `prefers-reduced-motion`
 - Contrast for pieces vs board; selection not color-only
 - Hit targets ≥ 44px; comfortable phone layout
 - Screen reader labels for piece state (selected, rotation, flipped)
-- Automated: lint, unit tests for solve/level load **and level solvability**
-- Manual: gesture checklist before each store build
+- Automated: lint, unit tests for solve/level load, **solvability**, and difficulty pool integrity
+- Manual: gesture checklist before each store build; spot-check each tier’s “feels harder”
 
 ---
 
-## 11. Delivery & ops
+## 12. Delivery & ops
 
 | Channel | Pipeline |
 | --- | --- |
@@ -309,54 +395,61 @@ Ship in **small slices**. Web preview on `main` remains the default review chann
 
 ---
 
-## 12. Suggested v1 “full experience” scope
+## 13. Suggested v1 “full experience” scope
 
 ### In
 
-- Home + Play + Win flow (under final or interim product name — **not** positioned as “T Puzzle” the product)
-- Tutorial
-- Demo T **plus** a pack of **different-shape** levels (8–12+), each validated solvable
-- **Daily challenge** mode
-- Local bests and settings (sound / haptics / snap)
+- Home with **Classic (difficulty picker)** + **Daily** (Sudoku.com-like dual entry)
+- Tutorial on Easy demo content
+- Difficulty tiers at launch: at least **Easy / Medium / Hard / Expert**
+- Multi-shape puzzle **pools** per tier (demo T in Easy); each validated solvable
+- **Daily challenge** + simple **archive** + trophy/streak + share card
+- Comfort tools: hint, undo, optional snap
+- Stats **per difficulty** (+ daily history)
+- Local persistence / continue; settings (sound / haptics / snap)
 - Capacitor shells + store listing drafts
 - Offline play
 
 ### Out of v1
 
-- Accounts, leaderboards, multiplayer
+- Accounts, global leaderboards, multiplayer
 - Ads / IAP (unless decided before Phase 1)
 - User-generated levels
+- Full seasonal events (Phase 4 OK)
+- Master/Extreme tier (optional stretch)
 
 ---
 
-## 13. Open decisions
+## 14. Open decisions
 
 Resolve before or during Phase 0:
 
-1. **Brand name** — final product name (explicitly **not** “T Puzzle”; pick from shape/fit direction or another brand)
+1. **Brand name** — final product name (explicitly **not** “T Puzzle”)
 2. **Audience** — kids, casual adults, or both?
 3. **Monetization** — free, paid upfront, or free + cosmetics later?
-4. **Content mix for v1** — how many distinct shapes vs rule variants on similar silhouettes?
-5. **Daily challenge rules** — same piece set rotated/scattered vs new silhouette cadence?
-6. **Primary language(s)**
-7. **Native timeline** — finish web experience first, then Capacitor; or bootstrap Capacitor in parallel from Phase 1?
+4. **Tier count & labels** — keep Easy→Expert for v1, or add Master at launch?
+5. **Pool size targets** — minimum puzzles per difficulty at launch
+6. **Daily format** — single featured daily vs daily per difficulty (Sudoku.com often emphasizes one daily cadence + archive)
+7. **Difficulty rubric** — formal authoring checklist (piece count, flip rules, silhouette complexity, par time)
+8. **Primary language(s)**
+9. **Native timeline** — web-first then Capacitor, or parallel from Phase 1?
 
 ---
 
-## 14. Follow-on docs (optional next)
+## 15. Follow-on docs (optional next)
 
 | File | Purpose |
 | --- | --- |
 | `docs/PRODUCT.md` | Vision, scope, non-goals, metrics, final name |
-| `docs/UX.md` | Journeys, gestures, screen inventory |
+| `docs/UX.md` | Journeys, gestures, difficulty picker + daily archive UI |
 | `docs/ARCHITECTURE.md` | Web + Capacitor, folders, build flavors |
-| `docs/LEVELS.md` | Level schema, authoring rules, solvability checklist |
+| `docs/LEVELS.md` | Level schema, difficulty rubric, solvability checklist |
 | `docs/STORE_CHECKLIST.md` | Apple / Google submission checklist |
 | `docs/ROADMAP.md` | Execution tracker for Phases 0–4 |
 
 ---
 
-## 15. Related project docs
+## 16. Related project docs
 
 | Doc | Role |
 | --- | --- |
