@@ -2,7 +2,7 @@
 
 Initial product and engineering plan for evolving the current playable MVP into a full web + store app experience.
 
-**Status:** Draft (active) — **Stages 00–01 done**; next coding stage **Stage 02**  
+**Status:** Draft (active) — **Stages 00–01 done**; next coding stage **Stage 02a** (Stage 02 substages)  
 **Working title:** Form Fit (final rename before Stage 03 store packaging)  
 **Progress tracker:** [`PROGRESS.md`](./PROGRESS.md)  
 **Stage docs:** [`stages/`](./stages/)  
@@ -236,7 +236,7 @@ Launch → Home
 
 ## 8. Phased roadmap
 
-**Kickoff:** Phases 0–1 / Stages 00–01 are **done**. Next: **Phase 2 / Stage 02** ([`stages/02-difficulty-pools-and-dailies.md`](./stages/02-difficulty-pools-and-dailies.md)). Track boxes in §17 and in each stage file; roll up status in [`PROGRESS.md`](./PROGRESS.md).
+**Kickoff:** Phases 0–1 / Stages 00–01 are **done**. Next: **Phase 2 / Stage 02a** ([`stages/02a-level-schema-and-demo-pack.md`](./stages/02a-level-schema-and-demo-pack.md)), then 02b→02c→02d. Parent rollup: [`stages/02-difficulty-pools-and-dailies.md`](./stages/02-difficulty-pools-and-dailies.md). Track boxes in §17 and stage files; roll up status in [`PROGRESS.md`](./PROGRESS.md).
 
 ### Phase 0 — Product foundation
 
@@ -269,19 +269,27 @@ Stage file: [`stages/01-app-shell-and-session.md`](./stages/01-app-shell-and-ses
 
 ### Phase 2 — Difficulty pools, multi-shape content & dailies
 
-Stage file: [`stages/02-difficulty-pools-and-dailies.md`](./stages/02-difficulty-pools-and-dailies.md)
+Parent stage: [`stages/02-difficulty-pools-and-dailies.md`](./stages/02-difficulty-pools-and-dailies.md)  
+**Implement via substages (in order):**
+
+| Substage | Doc | Focus |
+| --- | --- | --- |
+| 02a | [`stages/02a-level-schema-and-demo-pack.md`](./stages/02a-level-schema-and-demo-pack.md) | Level schema; demo T content pack; session loads levels; solvability harness |
+| 02b | [`stages/02b-classic-multi-shape-pools.md`](./stages/02b-classic-multi-shape-pools.md) | Multi-shape pools; classic deal + play another |
+| 02c | [`stages/02c-daily-challenge-and-archive.md`](./stages/02c-daily-challenge-and-archive.md) | Date-seeded daily; archive; streak/trophy; share card |
+| 02d | [`stages/02d-comfort-tools-stats-and-closeout.md`](./stages/02d-comfort-tools-stats-and-closeout.md) | Hints + undo; richer stats; QA; mark Phase 2 done |
 
 **Goal:** Sudoku.com-like loop — pick a difficulty or play daily; content beyond the demo T.
 
-| Workstream | Deliverables |
-| --- | --- |
-| Difficulty system | Named tiers; puzzle records tagged with `difficulty` |
-| Puzzle library v1 | Multi-shape pools per tier (demo T in Easy); each validated solvable |
-| Classic play | Pick difficulty → random/next puzzle from pool → complete → play another |
-| Stats | Per-difficulty best time/moves, wins; daily completion history |
-| Daily challenge | Date-seeded puzzle of the day; **archive calendar**; trophy/streak; share card |
-| Comfort tools | Progressive hints + undo (available across tiers) |
-| Authoring pipeline | Checklist/tests so new shapes cannot ship unsolvable or mistagged by difficulty |
+| Workstream | Deliverables | Substage |
+| --- | --- | --- |
+| Difficulty system | Named tiers; puzzle records tagged with `difficulty` | 02a–02b |
+| Puzzle library v1 | Multi-shape pools per tier (demo T in Easy); each validated solvable | 02a–02b |
+| Classic play | Pick difficulty → random/next puzzle from pool → complete → play another | 02b |
+| Daily challenge | Date-seeded puzzle of the day; **archive calendar**; trophy/streak; share card | 02c |
+| Comfort tools | Progressive hints + undo (available across tiers) | 02d |
+| Stats | Per-difficulty best time/moves, wins; daily completion history | 02d |
+| Authoring pipeline | Checklist/tests so new shapes cannot ship unsolvable or mistagged by difficulty | 02a–02d |
 
 **Tech note:** keep geometry in `src/lib/`; level definitions under `src/content/levels/` (or `…/by-difficulty/`); pure functions for date seed → daily puzzle id.
 
@@ -504,11 +512,11 @@ Use these as phase-level roll-ups. Prefer checking detailed items in the stage f
 
 ### Phase 2 — Difficulty pools, content & dailies
 
-- [ ] Difficulty-tagged puzzle pools (multi-shape, validated)
-- [ ] Classic play-by-difficulty loop
-- [ ] Daily + archive + trophy/streak + share
-- [ ] Per-difficulty stats; hints + undo
-- [ ] Authoring/solvability pipeline
+- [ ] 02a Level schema & demo pack → [`stages/02a-level-schema-and-demo-pack.md`](./stages/02a-level-schema-and-demo-pack.md)
+- [ ] 02b Classic multi-shape pools → [`stages/02b-classic-multi-shape-pools.md`](./stages/02b-classic-multi-shape-pools.md)
+- [ ] 02c Daily + archive + trophy/streak + share → [`stages/02c-daily-challenge-and-archive.md`](./stages/02c-daily-challenge-and-archive.md)
+- [ ] 02d Hints + undo + stats + closeout → [`stages/02d-comfort-tools-stats-and-closeout.md`](./stages/02d-comfort-tools-stats-and-closeout.md)
+- [ ] Authoring/solvability pipeline covered across 02a–02d
 - [ ] Stage 02 exit criteria met → [`stages/02-difficulty-pools-and-dailies.md`](./stages/02-difficulty-pools-and-dailies.md)
 
 ### Phase 3 — Store-ready packaging
