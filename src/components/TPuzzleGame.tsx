@@ -28,15 +28,14 @@ import {
   setSettings,
   type DifficultyBests,
 } from "@/lib/storage";
+import type { LevelDefinition } from "@/lib/level-schema";
 import {
-  BOARD_HEIGHT,
   BOARD_PADDING,
-  BOARD_WIDTH,
   createInitialPieces,
+  getMaskPixelSize,
   isPuzzleSolved,
   normalizeRotation,
   pointsToPolygon,
-  T_OUTLINE,
   TRAY_HEIGHT,
   UNIT,
   type PieceId,
@@ -52,6 +51,7 @@ type RotateGestureState = {
 
 type TPuzzleGameProps = {
   difficulty: Difficulty;
+  level: LevelDefinition;
 };
 
 let storageEpoch = 0;
@@ -75,12 +75,14 @@ function getStorageEpoch() {
   return storageEpoch;
 }
 
-export function TPuzzleGame({ difficulty }: TPuzzleGameProps) {
+export function TPuzzleGame({ difficulty, level }: TPuzzleGameProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const playAgainRef = useRef<HTMLButtonElement>(null);
   const winRecordedRef = useRef(false);
   const startRecordedFor = useRef<Difficulty | null>(null);
-  const [pieces, setPieces] = useState<PieceState[]>(createInitialPieces);
+  const [pieces, setPieces] = useState<PieceState[]>(() =>
+    createInitialPieces(level),
+  );
   const [selectedId, setSelectedId] = useState<PieceId | null>(null);
   const [solved, setSolved] = useState(false);
   const [showSolvedPopup, setShowSolvedPopup] = useState(false);
@@ -141,20 +143,23 @@ export function TPuzzleGame({ difficulty }: TPuzzleGameProps) {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  const boardWidth = BOARD_WIDTH + BOARD_PADDING * 2;
-  const boardHeight = BOARD_HEIGHT + BOARD_PADDING * 2 + TRAY_HEIGHT;
+  const { width: maskWidth, height: maskHeight } = getMaskPixelSize(
+    level.targetMask,
+  );
+  const boardWidth = maskWidth + BOARD_PADDING * 2;
+  const boardHeight = maskHeight + BOARD_PADDING * 2 + TRAY_HEIGHT;
   const boardOffsetX = BOARD_PADDING;
   const boardOffsetY = BOARD_PADDING;
 
-  const tOutline = useMemo(
+  const targetOutline = useMemo(
     () =>
       pointsToPolygon(
-        T_OUTLINE.map(([x, y]) => [
+        level.targetOutline.map(([x, y]) => [
           x * UNIT + boardOffsetX,
           y * UNIT + boardOffsetY,
         ]),
       ),
-    [boardOffsetX, boardOffsetY],
+    [level.targetOutline, boardOffsetX, boardOffsetY],
   );
 
   const updatePiece = (id: PieceId, next: Partial<PieceState>) => {
@@ -172,7 +177,7 @@ export function TPuzzleGame({ difficulty }: TPuzzleGameProps) {
   };
 
   const checkSolution = (nextPieces: PieceState[]) => {
-    if (isPuzzleSolved(nextPieces)) {
+    if (isPuzzleSolved(nextPieces, level)) {
       setSolved(true);
       setShowSolvedPopup(true);
     }
@@ -332,8 +337,10 @@ export function TPuzzleGame({ difficulty }: TPuzzleGameProps) {
     });
   };
 
+  const allowFlip = level.rules?.allowFlip !== false;
+
   const handleFlipSelected = () => {
-    if (!selectedId || solved || paused) {
+    if (!selectedId || solved || paused || !allowFlip) {
       return;
     }
 
@@ -352,7 +359,7 @@ export function TPuzzleGame({ difficulty }: TPuzzleGameProps) {
     rotateGestureRef.current = null;
     gestureLockRef.current.rotating = false;
     setBoardRotating(false);
-    setPieces(createInitialPieces());
+    setPieces(createInitialPieces(level));
     setSelectedId(null);
     setSolved(false);
     setShowSolvedPopup(false);
@@ -390,7 +397,8 @@ export function TPuzzleGame({ difficulty }: TPuzzleGameProps) {
             Form Fit
           </p>
           <p className="truncate text-xs font-medium uppercase tracking-[0.18em] text-[var(--accent-deep)]">
-            {DIFFICULTY_LABELS[difficulty]} · Demo shape
+            {DIFFICULTY_LABELS[difficulty]}
+            {level.title ? ` · ${level.title}` : null}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -419,7 +427,7 @@ export function TPuzzleGame({ difficulty }: TPuzzleGameProps) {
         <button
           type="button"
           onClick={handleFlipSelected}
-          disabled={!selectedId || controlsLocked}
+          disabled={!selectedId || controlsLocked || !allowFlip}
           className="rounded-full border border-[var(--ink)]/20 bg-[var(--surface)] px-3.5 py-2 text-sm font-medium text-[var(--ink)] transition hover:border-[var(--ink)]/40 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Flip
@@ -474,7 +482,7 @@ export function TPuzzleGame({ difficulty }: TPuzzleGameProps) {
             fill="#f0c419"
           />
           <polygon
-            points={tOutline}
+            points={targetOutline}
             fill="rgba(255,255,255,0.35)"
             stroke="rgba(0,0,0,0.2)"
             strokeWidth={2}
@@ -482,7 +490,7 @@ export function TPuzzleGame({ difficulty }: TPuzzleGameProps) {
           />
           <text
             x={boardOffsetX}
-            y={boardOffsetY + BOARD_HEIGHT + 36}
+            y={boardOffsetY + maskHeight + 36}
             className="fill-[var(--ink)] text-[12px] font-medium opacity-70"
           >
             Tray — drag pieces into the silhouette
@@ -492,6 +500,7 @@ export function TPuzzleGame({ difficulty }: TPuzzleGameProps) {
               key={piece.id}
               svgRef={svgRef}
               piece={piece}
+              definitions={level.pieces}
               selected={selectedId === piece.id}
               disabled={solved || paused || showTutorial}
               boardRotating={boardRotating}

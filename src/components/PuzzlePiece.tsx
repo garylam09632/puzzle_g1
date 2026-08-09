@@ -7,12 +7,14 @@ import {
   normalizeRotation,
   pointsToPolygon,
   UNIT,
+  type PieceDefinition,
   type PieceState,
 } from "@/lib/t-puzzle";
 import { useFinePointer } from "@/lib/useMediaQuery";
 
 type PuzzlePieceProps = {
   piece: PieceState;
+  definitions: PieceDefinition[];
   selected: boolean;
   disabled: boolean;
   boardRotating: boolean;
@@ -60,6 +62,7 @@ function clientToSvg(
 
 export function PuzzlePiece({
   piece,
+  definitions,
   selected,
   disabled,
   boardRotating,
@@ -75,8 +78,8 @@ export function PuzzlePiece({
   const wasSelectedOnPointerDownRef = useRef(false);
   const lastTapRef = useRef<TapState | null>(null);
 
-  const definition = getPieceDefinition(piece.id);
-  const transformedPoints = getTransformedPoints(piece);
+  const definition = getPieceDefinition(definitions, piece.id);
+  const transformedPoints = getTransformedPoints(piece, definitions);
   const polygon = pointsToPolygon(transformedPoints);
 
   useEffect(() => {

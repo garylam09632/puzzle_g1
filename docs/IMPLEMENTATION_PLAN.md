@@ -2,7 +2,7 @@
 
 Initial product and engineering plan for evolving the current playable MVP into a full web + store app experience.
 
-**Status:** Draft (active) — **Stages 00–01 done**; next coding stage **Stage 02a** (Stage 02 substages)  
+**Status:** Draft (active) — **Stages 00–01 + 02a done**; next coding stage **Stage 02b** (Stage 02 substages)  
 **Working title:** Form Fit (final rename before Stage 03 store packaging)  
 **Progress tracker:** [`PROGRESS.md`](./PROGRESS.md)  
 **Stage docs:** [`stages/`](./stages/)  
@@ -236,7 +236,7 @@ Launch → Home
 
 ## 8. Phased roadmap
 
-**Kickoff:** Phases 0–1 / Stages 00–01 are **done**. Next: **Phase 2 / Stage 02a** ([`stages/02a-level-schema-and-demo-pack.md`](./stages/02a-level-schema-and-demo-pack.md)), then 02b→02c→02d. Parent rollup: [`stages/02-difficulty-pools-and-dailies.md`](./stages/02-difficulty-pools-and-dailies.md). Track boxes in §17 and stage files; roll up status in [`PROGRESS.md`](./PROGRESS.md).
+**Kickoff:** Phases 0–1 / Stages 00–01 and Stage **02a** are **done**. Next: **Phase 2 / Stage 02b** ([`stages/02b-classic-multi-shape-pools.md`](./stages/02b-classic-multi-shape-pools.md)), then 02c→02d. Parent rollup: [`stages/02-difficulty-pools-and-dailies.md`](./stages/02-difficulty-pools-and-dailies.md). Track boxes in §17 and stage files; roll up status in [`PROGRESS.md`](./PROGRESS.md).
 
 ### Phase 0 — Product foundation
 
@@ -512,7 +512,7 @@ Use these as phase-level roll-ups. Prefer checking detailed items in the stage f
 
 ### Phase 2 — Difficulty pools, content & dailies
 
-- [ ] 02a Level schema & demo pack → [`stages/02a-level-schema-and-demo-pack.md`](./stages/02a-level-schema-and-demo-pack.md)
+- [x] 02a Level schema & demo pack → [`stages/02a-level-schema-and-demo-pack.md`](./stages/02a-level-schema-and-demo-pack.md)
 - [ ] 02b Classic multi-shape pools → [`stages/02b-classic-multi-shape-pools.md`](./stages/02b-classic-multi-shape-pools.md)
 - [ ] 02c Daily + archive + trophy/streak + share → [`stages/02c-daily-challenge-and-archive.md`](./stages/02c-daily-challenge-and-archive.md)
 - [ ] 02d Hints + undo + stats + closeout → [`stages/02d-comfort-tools-stats-and-closeout.md`](./stages/02d-comfort-tools-stats-and-closeout.md)

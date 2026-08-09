@@ -1,8 +1,10 @@
+import type { LevelDefinition } from "@/lib/level-schema";
+
 export const UNIT = 80;
 
 export type Point = [number, number];
 
-export type PieceId = "triangle" | "trapezoid-a" | "trapezoid-b" | "pentagon";
+export type PieceId = string;
 
 export type PieceDefinition = {
   id: PieceId;
@@ -19,104 +21,59 @@ export type PieceState = {
   flipped?: boolean;
 };
 
-/** Classic T-puzzle polygons (unit coordinates; 1 unit = 80px). */
-export const PIECE_DEFINITIONS: PieceDefinition[] = [
-  {
-    id: "triangle",
-    name: "Triangle",
-    points: [
-      [0, 0],
-      [0, 1],
-      [1, 1],
-    ],
-    color: "#1a1a1a",
-  },
-  {
-    id: "trapezoid-a",
-    name: "Trapezoid A",
-    points: [
-      [0, 0.48],
-      [0.13, 0],
-      [1.09, 0.26],
-      [0.71, 1.71],
-    ],
-    color: "#2a2a2a",
-  },
-  {
-    id: "trapezoid-b",
-    name: "Trapezoid B",
-    points: [
-      [0, 0.8],
-      [0.6, 0],
-      [2.2, 1.19],
-      [2.41, 2.59],
-    ],
-    color: "#3a3a3a",
-  },
-  {
-    id: "pentagon",
-    name: "Pentagon",
-    points: [
-      [0, 0.48],
-      [1.23, 1.34],
-      [2.63, 1.09],
-      [2.21, 0.8],
-      [2.79, 0],
-    ],
-    color: "#4a4a4a",
-  },
-];
+export type SolveConfig = {
+  /** Samples per cell edge (N×N grid inside each board cell). */
+  sampleGridSize: number;
+  /** Min filled-sample fraction for a target cell to count as covered. */
+  minTargetCellCoverage: number;
+  /** Max filled-sample fraction allowed in a non-target (empty) cell. */
+  maxEmptyCellCoverage: number;
+  /** Min target-cell centers a piece must cover to count as placed. */
+  minTargetCellsPerPiece: number;
+  /** How many mask cells may mismatch and still count as solved (0 = exact). */
+  maxMismatchedCells: number;
+};
 
-/** Target T silhouette in unit coordinates (3 wide × 4 tall). */
-export const T_OUTLINE: Point[] = [
-  [0, 0],
-  [3, 0],
-  [3, 1],
-  [2, 1],
-  [2, 4],
-  [1, 4],
-  [1, 1],
-  [0, 1],
-];
-
-export const BOARD_WIDTH = 3 * UNIT;
-export const BOARD_HEIGHT = 4 * UNIT;
 export const BOARD_PADDING = 48;
 export const TRAY_HEIGHT = 180;
 
 /**
- * Target T silhouette as a cell mask (true = must be filled).
- * Change this to alter the solved shape.
+ * Tunable solve strictness defaults.
+ * Per-level overrides merge via `mergeSolveConfig`.
  */
-export const T_MASK: boolean[][] = [
-  [true, true, true],
-  [false, true, false],
-  [false, true, false],
-  [false, true, false],
-];
-
-/**
- * Tunable solve strictness.
- * - Raise `minTargetCellCoverage` / lower `maxEmptyCellCoverage` to tighten.
- * - Raise `sampleGridSize` for finer sampling.
- * - Raise `minTargetCellsPerPiece` so pieces must sit more firmly on the T.
- * - Raise `maxMismatchedCells` to allow near-miss solutions.
- */
-export const SOLVE_CONFIG = {
-  /** Samples per cell edge (N×N grid inside each board cell). */
+export const SOLVE_CONFIG: SolveConfig = {
   sampleGridSize: 12,
-  /** Min filled-sample fraction for a T cell to count as covered. */
   minTargetCellCoverage: 0.85,
-  /** Max filled-sample fraction allowed in a non-T (empty) cell. */
   maxEmptyCellCoverage: 0.15,
-  /** Min T-cell centers a piece must cover to count as placed on the board. */
   minTargetCellsPerPiece: 1,
-  /** How many mask cells may mismatch and still count as solved (0 = exact). */
   maxMismatchedCells: 0,
-} as const;
+};
 
-export function getPieceDefinition(id: PieceId): PieceDefinition {
-  const piece = PIECE_DEFINITIONS.find((entry) => entry.id === id);
+export function mergeSolveConfig(
+  overrides?: Partial<SolveConfig>,
+): SolveConfig {
+  return { ...SOLVE_CONFIG, ...overrides };
+}
+
+export function getMaskPixelSize(mask: boolean[][]): {
+  width: number;
+  height: number;
+} {
+  const rows = mask.length;
+  const cols = mask[0]?.length ?? 0;
+  return { width: cols * UNIT, height: rows * UNIT };
+}
+
+/** @deprecated Prefer getMaskPixelSize(level.targetMask); kept for demo T size. */
+export const BOARD_WIDTH = 3 * UNIT;
+/** @deprecated Prefer getMaskPixelSize(level.targetMask); kept for demo T size. */
+export const BOARD_HEIGHT = 4 * UNIT;
+
+export function getPieceDefinition(
+  pieces: PieceDefinition[],
+  id: PieceId,
+): PieceDefinition {
+  const piece = pieces.find((entry) => entry.id === id);
   if (!piece) {
     throw new Error(`Unknown piece: ${id}`);
   }
@@ -142,8 +99,11 @@ export function getPieceCentroid(points: Point[]): Point {
   return [sum[0] / points.length, sum[1] / points.length];
 }
 
-export function getTransformedPoints(piece: PieceState): Point[] {
-  const definition = getPieceDefinition(piece.id);
+export function getTransformedPoints(
+  piece: PieceState,
+  definitions: PieceDefinition[],
+): Point[] {
+  const definition = getPieceDefinition(definitions, piece.id);
   const centroid = getPieceCentroid(definition.points);
   const rotation = normalizeRotation(piece.rotation);
   const flipped = piece.flipped ?? false;
@@ -182,16 +142,23 @@ function pointInPolygon(point: Point, polygon: Point[]): boolean {
   return inside;
 }
 
-function cellCoverageFractions(pieces: PieceState[]): number[][] {
-  const rows = T_MASK.length;
-  const cols = T_MASK[0].length;
-  const grid = SOLVE_CONFIG.sampleGridSize;
+function cellCoverageFractions(
+  pieces: PieceState[],
+  definitions: PieceDefinition[],
+  mask: boolean[][],
+  config: SolveConfig,
+): number[][] {
+  const rows = mask.length;
+  const cols = mask[0]?.length ?? 0;
+  const grid = config.sampleGridSize;
   const sampleStep = UNIT / grid;
   const fractions = Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => 0),
   );
 
-  const polygons = pieces.map((piece) => getTransformedPoints(piece));
+  const polygons = pieces.map((piece) =>
+    getTransformedPoints(piece, definitions),
+  );
 
   for (let row = 0; row < rows; row += 1) {
     for (let col = 0; col < cols; col += 1) {
@@ -216,13 +183,17 @@ function cellCoverageFractions(pieces: PieceState[]): number[][] {
   return fractions;
 }
 
-function countTargetCellsCovered(boardPiece: PieceState): number {
-  const polygon = getTransformedPoints(boardPiece);
+function countTargetCellsCovered(
+  boardPiece: PieceState,
+  definitions: PieceDefinition[],
+  mask: boolean[][],
+): number {
+  const polygon = getTransformedPoints(boardPiece, definitions);
   let covered = 0;
 
-  for (let row = 0; row < T_MASK.length; row += 1) {
-    for (let col = 0; col < T_MASK[row].length; col += 1) {
-      if (!T_MASK[row][col]) {
+  for (let row = 0; row < mask.length; row += 1) {
+    for (let col = 0; col < mask[row].length; col += 1) {
+      if (!mask[row][col]) {
         continue;
       }
 
@@ -237,7 +208,19 @@ function countTargetCellsCovered(boardPiece: PieceState): number {
   return covered;
 }
 
-export function isPuzzleSolved(pieces: PieceState[]): boolean {
+export type SolveLevelInput = Pick<
+  LevelDefinition,
+  "pieces" | "targetMask" | "solveConfig"
+>;
+
+export function isPuzzleSolved(
+  pieces: PieceState[],
+  level: SolveLevelInput,
+): boolean {
+  const config = mergeSolveConfig(level.solveConfig);
+  const mask = level.targetMask;
+  const definitions = level.pieces;
+
   const boardPieces = pieces.map((piece) => ({
     ...piece,
     x: piece.x - BOARD_PADDING,
@@ -247,21 +230,27 @@ export function isPuzzleSolved(pieces: PieceState[]): boolean {
   if (
     !boardPieces.every(
       (piece) =>
-        countTargetCellsCovered(piece) >= SOLVE_CONFIG.minTargetCellsPerPiece,
+        countTargetCellsCovered(piece, definitions, mask) >=
+        config.minTargetCellsPerPiece,
     )
   ) {
     return false;
   }
 
-  const fractions = cellCoverageFractions(boardPieces);
+  const fractions = cellCoverageFractions(
+    boardPieces,
+    definitions,
+    mask,
+    config,
+  );
   let mismatches = 0;
 
-  for (let row = 0; row < T_MASK.length; row += 1) {
-    for (let col = 0; col < T_MASK[row].length; col += 1) {
+  for (let row = 0; row < mask.length; row += 1) {
+    for (let col = 0; col < mask[row].length; col += 1) {
       const fraction = fractions[row][col];
-      const cellOk = T_MASK[row][col]
-        ? fraction >= SOLVE_CONFIG.minTargetCellCoverage
-        : fraction <= SOLVE_CONFIG.maxEmptyCellCoverage;
+      const cellOk = mask[row][col]
+        ? fraction >= config.minTargetCellCoverage
+        : fraction <= config.maxEmptyCellCoverage;
 
       if (!cellOk) {
         mismatches += 1;
@@ -269,16 +258,32 @@ export function isPuzzleSolved(pieces: PieceState[]): boolean {
     }
   }
 
-  return mismatches <= SOLVE_CONFIG.maxMismatchedCells;
+  return mismatches <= config.maxMismatchedCells;
 }
 
-export function createInitialPieces(): PieceState[] {
-  const trayTop = BOARD_PADDING + BOARD_HEIGHT + 56;
+function defaultTraySpawns(
+  level: LevelDefinition,
+  boardHeight: number,
+): PieceState[] {
+  const trayTop = BOARD_PADDING + boardHeight + 56;
+  const cols = 2;
+  return level.pieces.map((piece, index) => {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    return {
+      id: piece.id,
+      x: BOARD_PADDING + 20 + col * 110,
+      y: trayTop + row * 90,
+      rotation: 0,
+    };
+  });
+}
 
-  return [
-    { id: "triangle", x: BOARD_PADDING + 20, y: trayTop, rotation: 0 },
-    { id: "trapezoid-a", x: BOARD_PADDING + 90, y: trayTop, rotation: 0 },
-    { id: "trapezoid-b", x: BOARD_PADDING + 20, y: trayTop + 90, rotation: 0 },
-    { id: "pentagon", x: BOARD_PADDING + 130, y: trayTop + 70, rotation: 0 },
-  ];
+export function createInitialPieces(level: LevelDefinition): PieceState[] {
+  const { height: boardHeight } = getMaskPixelSize(level.targetMask);
+  const spawns = level.rules?.traySpawns;
+  if (spawns && spawns.length > 0) {
+    return spawns.map((spawn) => ({ ...spawn }));
+  }
+  return defaultTraySpawns(level, boardHeight);
 }

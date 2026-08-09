@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { TPuzzleGame } from "@/components/TPuzzleGame";
+import { getLevelForDifficulty } from "@/content/levels";
 import { DIFFICULTIES, parseDifficulty } from "@/lib/difficulty";
 
 type PlayPageProps = {
@@ -17,9 +18,11 @@ export default async function PlayPage({ params }: PlayPageProps) {
     notFound();
   }
 
+  const level = getLevelForDifficulty(difficulty);
+
   return (
     <main className="app-atmosphere relative min-h-full">
-      <TPuzzleGame difficulty={difficulty} />
+      <TPuzzleGame difficulty={difficulty} level={level} />
     </main>
   );
 }

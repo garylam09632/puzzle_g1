@@ -1,7 +1,7 @@
 # Stage 02 — Difficulty pools, content & dailies
 
 **Phase:** 2  
-**Status:** `not_started`  
+**Status:** `in_progress`  
 **Goal:** Sudoku.com-like loop — pick a difficulty or play daily; multi-shape content beyond the demo T.  
 **Depends on:** Stage 01 shell  
 **Parent plan:** [`../IMPLEMENTATION_PLAN.md`](../IMPLEMENTATION_PLAN.md) · [`../PROGRESS.md`](../PROGRESS.md)
@@ -51,12 +51,12 @@ Prefer checking detailed boxes in the **substage** files. Use this list as a Pha
 
 ### Difficulty & library — 02a / 02b
 
-- [ ] Level schema includes `difficulty` (and metadata: par, rules, shape id)
-- [ ] Content folder structure for pools (`src/content/levels/` or equivalent)
-- [ ] Easy pool includes demo T
+- [x] Level schema includes `difficulty` (and metadata: par, rules, shape id) *(02a)*
+- [x] Content folder structure for pools (`src/content/levels/` or equivalent) *(02a)*
+- [x] Easy pool includes demo T *(02a)*
 - [ ] Medium / Hard / Expert pools have validated multi-shape entries
 - [ ] Classic flow: pick difficulty → next/random from pool → play another
-- [ ] Difficulty rubric documented (link or `docs/LEVELS.md`)
+- [x] Difficulty rubric documented (link or `docs/LEVELS.md`) *(02a stub; rubric grows in 02b)*
 
 ### Daily challenge — 02c
 
@@ -75,7 +75,7 @@ Prefer checking detailed boxes in the **substage** files. Use this list as a Pha
 
 ### Quality gates — 02a–02d
 
-- [ ] Solvability tests/checklist for each new puzzle
+- [x] Solvability tests/checklist for each new puzzle *(02a harness for demo T; expand per pack in 02b+)*
 - [ ] Mistagging review (tier feels right in spot checks)
 - [ ] Lint + Pages build + deploy confirmed
 
@@ -91,3 +91,4 @@ Prefer checking detailed boxes in the **substage** files. Use this list as a Pha
 | Date | Note |
 | --- | --- |
 | 2026-08-09 | Split Stage 02 into substages 02a–02d for incremental delivery. |
+| 2026-08-09 | Stage 02a done: level schema + `easy-demo-t` content pack + solvability harness. Parent status → `in_progress`. Next: 02b. |
