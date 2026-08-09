@@ -2,7 +2,8 @@
 
 Initial product and engineering plan for evolving the current playable MVP into a full web + store app experience.
 
-**Status:** Draft (active) — kickoff **Stage 00**  
+**Status:** Draft (active) — **Stage 00 done**; next coding stage **Stage 01**  
+**Working title:** Form Fit (final rename before Stage 03 store packaging)  
 **Progress tracker:** [`PROGRESS.md`](./PROGRESS.md)  
 **Stage docs:** [`stages/`](./stages/)  
 **Surfaces:** Website, iOS App Store, Google Play  
@@ -39,9 +40,9 @@ The durable product fantasy is:
 ### App name
 
 - The shipped app **will not be named “T Puzzle.”**
-- “T Puzzle” / `TPuzzleGame` may remain as temporary MVP labels in code/docs until rename work lands.
-- Final brand TBD in Phase 0; lean toward names about **shape / fit / silhouette / form** (examples of direction only: Silhouette, Form Fit, Shapecraft, Dissect, Outline).
-- Once a name is locked: update UI strings, `README`, store listings, and this plan’s title.
+- **Interim working title (Stage 00):** **Form Fit** — use in Stage 01+ UI / home brand until final rename.
+- “T Puzzle” / `TPuzzleGame` may remain as temporary MVP code identifiers until rename work lands.
+- **Final brand** locked before Stage 03 store packaging; then update UI strings, `README`, store listings, and this plan’s title.
 
 ### Content pillars (Sudoku.com-like)
 
@@ -239,14 +240,15 @@ Launch → Home
 
 ### Phase 0 — Product foundation
 
-Stage file: [`stages/00-product-foundation.md`](./stages/00-product-foundation.md)
+Stage file: [`stages/00-product-foundation.md`](./stages/00-product-foundation.md) — **done 2026-08-09**
 
-- Lock **final app name**, visual direction, target age, monetization (free / ads / IAP)
-- Lock difficulty tier names/count (default proposal: Easy → Medium → Hard → Expert; Master later)
-- Expand this plan into focused docs as needed (`PRODUCT`, `UX`, `ARCHITECTURE`, `LEVELS`, `STORE_CHECKLIST`)
-- Define success metrics: time-to-first-solve, solve rate **by difficulty**, daily completion / streak, return visits, crash-free sessions
+- Interim app name **Form Fit** (final rename before Stage 03); visual direction notes recorded
+- Audience: casual adults (kids-friendly OK); monetization: free v1, no ads/IAP; language: EN
+- Tiers: Easy → Medium → Hard → Expert; Master later (Stage 04)
+- Daily: one featured daily + archive; pool floor ~8–12/tier by end of Stage 02
+- Success metrics recorded in Stage 00 Decisions log
 
-**Exit criteria:** scope and non-goals agreed; implementation can start without re-litigating v1.
+**Exit criteria:** scope and non-goals agreed; implementation can start without re-litigating v1. ✅
 
 ### Phase 1 — App shell & session polish (web-first)
 
@@ -427,7 +429,7 @@ Ship in **small slices**. Web preview on `main` remains the default review chann
 ### Out of v1
 
 - Accounts, global leaderboards, multiplayer
-- Ads / IAP (unless decided before Phase 1)
+- Ads / IAP (decided: free v1; cosmetics later in Stage 04+)
 - User-generated levels
 - Full seasonal events (Phase 4 OK)
 - Master/Extreme tier (optional stretch)
@@ -436,17 +438,21 @@ Ship in **small slices**. Web preview on `main` remains the default review chann
 
 ## 14. Open decisions
 
-Resolve before or during Phase 0:
+Phase 0 resolved 2026-08-09 (see [`stages/00-product-foundation.md`](./stages/00-product-foundation.md) Decisions log):
 
-1. **Brand name** — final product name (explicitly **not** “T Puzzle”)
-2. **Audience** — kids, casual adults, or both?
-3. **Monetization** — free, paid upfront, or free + cosmetics later?
-4. **Tier count & labels** — keep Easy→Expert for v1, or add Master at launch?
-5. **Pool size targets** — minimum puzzles per difficulty at launch
-6. **Daily format** — single featured daily vs daily per difficulty (Sudoku.com often emphasizes one daily cadence + archive)
-7. **Difficulty rubric** — formal authoring checklist (piece count, flip rules, silhouette complexity, par time)
-8. **Primary language(s)**
-9. **Native timeline** — web-first then Capacitor, or parallel from Phase 1?
+| # | Topic | Resolution |
+| --- | --- | --- |
+| 1 | Brand name | Interim **Form Fit**; final name before Stage 03 (not “T Puzzle”) |
+| 2 | Audience | Casual adults primary; kids-friendly OK |
+| 3 | Monetization | Free v1; no ads/IAP; cosmetics later (Stage 04+) |
+| 4 | Tier count & labels | Easy / Medium / Hard / Expert; Master/Extreme → Stage 04 |
+| 5 | Pool size targets | ~8–12 validated puzzles per tier by end of Stage 02 |
+| 6 | Daily format | One featured daily + archive (+ trophies/streak) |
+| 7 | Difficulty rubric | Deferred to Stage 02 / `docs/LEVELS.md` (working guide: plan §3.1) |
+| 8 | Primary language(s) | English for v1 |
+| 9 | Native timeline | Web-first Stages 01–02; Capacitor in Stage 03 |
+
+Remaining product locks before store ship: **final app name** (and any store subtitle/keywords) in Stage 03.
 
 ---
 
@@ -480,12 +486,12 @@ Use these as phase-level roll-ups. Prefer checking detailed items in the stage f
 
 ### Phase 0 — Product foundation
 
-- [ ] App name (final or interim + rename deadline)
-- [ ] Audience + monetization + language(s)
-- [ ] Difficulty tiers for v1 locked
-- [ ] Daily format locked
-- [ ] Success metrics recorded
-- [ ] Stage 00 exit criteria met → [`stages/00-product-foundation.md`](./stages/00-product-foundation.md)
+- [x] App name (final or interim + rename deadline)
+- [x] Audience + monetization + language(s)
+- [x] Difficulty tiers for v1 locked
+- [x] Daily format locked
+- [x] Success metrics recorded
+- [x] Stage 00 exit criteria met → [`stages/00-product-foundation.md`](./stages/00-product-foundation.md)
 
 ### Phase 1 — App shell & session polish
 
