@@ -2,7 +2,9 @@
 
 Initial product and engineering plan for evolving the current playable MVP into a full web + store app experience.
 
-**Status:** Draft (updated with Sudoku.com-like difficulty + daily model)  
+**Status:** Draft (active) — kickoff **Stage 00**  
+**Progress tracker:** [`PROGRESS.md`](./PROGRESS.md)  
+**Stage docs:** [`stages/`](./stages/)  
 **Surfaces:** Website, iOS App Store, Google Play  
 **Live web preview (MVP):** https://garylam09632.github.io/puzzle_g1/  
 **Reference product pattern:** Sudoku.com (Easybrain) — difficulty ladder, large puzzle pool, daily challenges with archive/rewards, per-difficulty stats
@@ -233,7 +235,11 @@ Launch → Home
 
 ## 8. Phased roadmap
 
+**Kickoff:** Start at **Phase 0 / Stage 00** ([`stages/00-product-foundation.md`](./stages/00-product-foundation.md)), then **Phase 1 / Stage 01** for the first coding work. Track boxes in §17 and in each stage file; roll up status in [`PROGRESS.md`](./PROGRESS.md).
+
 ### Phase 0 — Product foundation
+
+Stage file: [`stages/00-product-foundation.md`](./stages/00-product-foundation.md)
 
 - Lock **final app name**, visual direction, target age, monetization (free / ads / IAP)
 - Lock difficulty tier names/count (default proposal: Easy → Medium → Hard → Expert; Master later)
@@ -243,6 +249,8 @@ Launch → Home
 **Exit criteria:** scope and non-goals agreed; implementation can start without re-litigating v1.
 
 ### Phase 1 — App shell & session polish (web-first)
+
+Stage file: [`stages/01-app-shell-and-session.md`](./stages/01-app-shell-and-session.md)
 
 **Goal:** feels like a game, not a demo page. Demo T remains an Easy-pool entry.
 
@@ -258,6 +266,8 @@ Launch → Home
 **Exit criteria:** new player understands controls without the README; win feels rewarding; progress survives refresh.
 
 ### Phase 2 — Difficulty pools, multi-shape content & dailies
+
+Stage file: [`stages/02-difficulty-pools-and-dailies.md`](./stages/02-difficulty-pools-and-dailies.md)
 
 **Goal:** Sudoku.com-like loop — pick a difficulty or play daily; content beyond the demo T.
 
@@ -275,6 +285,8 @@ Launch → Home
 
 ### Phase 3 — Store-ready packaging
 
+Stage file: [`stages/03-store-ready-packaging.md`](./stages/03-store-ready-packaging.md)
+
 **Goal:** same build runs in Capacitor; store checklist green.
 
 | Workstream | Deliverables |
@@ -289,6 +301,8 @@ Launch → Home
 **Exit criteria:** TestFlight + internal Play track installable; gestures work under WebView; offline cold start plays.
 
 ### Phase 4 — Growth & depth
+
+Stage file: [`stages/04-growth-and-depth.md`](./stages/04-growth-and-depth.md)
 
 - Master / Extreme tier; larger pools per difficulty
 - Seasonal events / medals (Sudoku.com-style limited events)
@@ -445,7 +459,6 @@ Resolve before or during Phase 0:
 | `docs/ARCHITECTURE.md` | Web + Capacitor, folders, build flavors |
 | `docs/LEVELS.md` | Level schema, difficulty rubric, solvability checklist |
 | `docs/STORE_CHECKLIST.md` | Apple / Google submission checklist |
-| `docs/ROADMAP.md` | Execution tracker for Phases 0–4 |
 
 ---
 
@@ -453,6 +466,55 @@ Resolve before or during Phase 0:
 
 | Doc | Role |
 | --- | --- |
+| [`PROGRESS.md`](./PROGRESS.md) | Roll-up status; which stage is current |
+| [`stages/`](./stages/) | Per-stage goals, exit criteria, detailed checklists |
 | `README.md` | How to run the current MVP (still demo-T oriented until rename) |
 | `AGENTS.md` | Next.js version caveat for agents |
 | `.cursor/rules/commit-merge-deploy.mdc` | Branch, merge, and Pages deploy loop |
+
+---
+
+## 17. Implementation plan checklists
+
+Use these as phase-level roll-ups. Prefer checking detailed items in the stage files; mark a phase done here when its stage exit criteria are met.
+
+### Phase 0 — Product foundation
+
+- [ ] App name (final or interim + rename deadline)
+- [ ] Audience + monetization + language(s)
+- [ ] Difficulty tiers for v1 locked
+- [ ] Daily format locked
+- [ ] Success metrics recorded
+- [ ] Stage 00 exit criteria met → [`stages/00-product-foundation.md`](./stages/00-product-foundation.md)
+
+### Phase 1 — App shell & session polish
+
+- [ ] Home with Play + Daily entry
+- [ ] Difficulty picker
+- [ ] Play HUD + tutorial + polished win
+- [ ] Persistence (settings / tutorial / bests structure)
+- [ ] Responsive + lint/build/Pages deploy
+- [ ] Stage 01 exit criteria met → [`stages/01-app-shell-and-session.md`](./stages/01-app-shell-and-session.md)
+
+### Phase 2 — Difficulty pools, content & dailies
+
+- [ ] Difficulty-tagged puzzle pools (multi-shape, validated)
+- [ ] Classic play-by-difficulty loop
+- [ ] Daily + archive + trophy/streak + share
+- [ ] Per-difficulty stats; hints + undo
+- [ ] Authoring/solvability pipeline
+- [ ] Stage 02 exit criteria met → [`stages/02-difficulty-pools-and-dailies.md`](./stages/02-difficulty-pools-and-dailies.md)
+
+### Phase 3 — Store-ready packaging
+
+- [ ] Capacitor iOS + Android from static export
+- [ ] Native UX (icons, splash, safe areas, gestures)
+- [ ] Offline core play + privacy draft
+- [ ] Internal TestFlight + Play tracks
+- [ ] Stage 03 exit criteria met → [`stages/03-store-ready-packaging.md`](./stages/03-store-ready-packaging.md)
+
+### Phase 4 — Growth & depth
+
+- [ ] Growth bet shipped (Master tier / events / themes / etc.)
+- [ ] Expanded pools; localization/hosting as scoped
+- [ ] Stage 04 exit criteria met → [`stages/04-growth-and-depth.md`](./stages/04-growth-and-depth.md)
